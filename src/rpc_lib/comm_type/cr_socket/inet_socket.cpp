@@ -5,14 +5,14 @@
 
 using namespace cr_common;
 
-inet_socket::inet_socket(socket_type type)
-    :	_socket_type(type)
+inet_socket::inet_socket(stream_type type)
+    :	net_socket(type)
 {
 }
 
 int inet_socket::init()
 {
-    if ((_socket_fd = ::socket(AF_INET, _socket_type == SOCKET_TCP ? SOCK_STREAM : SOCK_DGRAM, 0)) < 0)
+    if ((_socket_fd = ::socket(AF_INET, _stream_type == STREAM_TCP ? SOCK_STREAM : SOCK_DGRAM, 0)) < 0)
     {
         perror("inet socket init error");
         _socket_fd = 0;
@@ -31,9 +31,8 @@ int inet_socket::bind(const std::string &addr)
 {
     assert(addr.size());
 
-    int ret = NETCONNECTUTILS(addr);
-    if (ret != NCR_OK)
-        return ret;
+    int ret = CONNECTUTILS_BIND(_socket_fd, addr.c_str());
+    if (ret != NCR_OK) return ret;
 
     return 0;
 }

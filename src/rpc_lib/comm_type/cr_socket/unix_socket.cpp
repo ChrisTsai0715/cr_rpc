@@ -1,10 +1,11 @@
 #include "unix_socket.h"
 #include <signal.h>
 #include <assert.h>
+#include <stddef.h>
 
 using namespace cr_common;
 
-unix_socket::unix_socket(socket_type type)
+unix_socket::unix_socket(stream_type type)
     :	net_socket(type)
 {
 
@@ -36,7 +37,7 @@ int unix_socket::bind(const std::string &addr)
     sockaddr_un sockaddr;
     int bind_size = offsetof(sockaddr_un, sun_path) + strlen(sockaddr.sun_path);
     unlink(sockaddr.sun_path);
-    addr.sun_family = AF_UNIX;
+    sockaddr.sun_family = AF_UNIX;
     strcpy(sockaddr.sun_path, addr.c_str());
     if(::bind(_socket_fd, (struct sockaddr *)&sockaddr, bind_size) < 0)
     {

@@ -1,13 +1,13 @@
 #include "base_rpc_client.h"
 
 using namespace cr_rpc;
-base_rpc_client::base_rpc_client(rpc_comm_type_def type)
+rpc_client::rpc_client(rpc_comm_type_def type)
 {
     switch(type)
     {
     default:
-    case RPC_COMM_TYPE_SOCKET:
-        _unix_comm_client = new socket_comm_client(this);
+    case RPC_COMM_TYPE_INET:
+        _unix_comm_client = new isocket_comm_client(this);
         break;
 
     case RPC_COMM_TYPE_FIFO:
@@ -16,12 +16,12 @@ base_rpc_client::base_rpc_client(rpc_comm_type_def type)
     }
 }
 
-base_rpc_client::~base_rpc_client()
+rpc_client::~rpc_client()
 {
 
 }
 
-bool base_rpc_client::start_connect()
+bool rpc_client::start_connect()
 {
     try
     {
@@ -38,7 +38,7 @@ bool base_rpc_client::start_connect()
     return true;
 }
 
-bool base_rpc_client::send_req(const std::string &cmd, rpc_req_args_type &req_map)
+bool rpc_client::send_req(const std::string &cmd, rpc_req_args_type &req_map)
 {
     std::string json_str;
     _format_req_msg(cmd, req_map, json_str);
@@ -46,20 +46,25 @@ bool base_rpc_client::send_req(const std::string &cmd, rpc_req_args_type &req_ma
     return _unix_comm_client->write(json_str.c_str(), json_str.size());
 }
 
-void base_rpc_client::_disconnect_server(int fd)
+void rpc_client::_disconnect_server(int fd)
 {
     fd = fd;
     _unix_comm_client->disconnect_server();
 }
 
-void base_rpc_client::_data_receive(int fd, char *buf, size_t size)
+void rpc_client::_connect(int socket_fd)
+{
+    return ;
+}
+
+void rpc_client::_data_receive(int fd, char *buf, size_t size)
 {
     fd = fd;
     _receive_data_handle(buf, size);
     _unix_comm_client->read();
 }
 
-void base_rpc_client::_data_send(int fd, size_t size)
+void rpc_client::_data_send(int fd, size_t size)
 {
     fd = fd;
     size = size;

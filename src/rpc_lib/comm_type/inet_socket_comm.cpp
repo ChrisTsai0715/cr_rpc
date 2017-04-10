@@ -1,183 +1,149 @@
-#include "socket_comm.h"
+#include "inet_socket_comm.h"
 #include <signal.h>
+#include "cr_socket/inet_socket.h"
+#include "cr_socket/socket_connect.h"
 
 using namespace cr_rpc;
 
-int unix_socket_comm::_create_socket(const std::string &path)
+CRefObj<cr_common::net_socket> inet_socket_comm::_create_socket(const std::string path)
 {
-    assert(path.size());
-
-    int fd;
-    struct sockaddr_un addr;
-    bzero((void*)&addr, sizeof(addr));
-
-    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
-    {
-        perror("socket create failed...");
-        throw std::runtime_error("socket create failed");
-    }
+    CRefObj<cr_common::net_socket> isocket = new cr_common::inet_socket(cr_common::STREAM_TCP);
+    if(path.size() > 0) isocket->bind(path);
 
     sigset_t set;
     sigemptyset(&set);
     sigaddset(&set, SIGPIPE);
     sigprocmask(SIG_BLOCK, &set, NULL);
 
-    return fd;
+    return isocket;
 }
 
-bool socket_comm_client::start_connect(const std::string &path, unsigned int timeout_ms)
+bool isocket_comm_client::start_connect(const std::string &path, unsigned int timeout_ms)
 {
-    _socket_fd = _create_socket(path);
+    _net_socket = _create_socket();
 
-    struct sockaddr_un server_addr;
-    bzero((void *)&server_addr, sizeof(server_addr));
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, path.c_str());
+    uint16_t port;
+    std::string dest_addr;
+    if (!_get_addr_port(path, port, dest_addr))
+        return false;
 
-    fcntl(_socket_fd, F_SETFL, O_NONBLOCK);
-
-    int connect_err;
-    if (0 == (connect_err = connect(_socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr))))
-        return true;
-    else if (errno != EINPROGRESS)
-    {
-        perror("connect error");
-        throw std::runtime_error("connect server failed");;
-    }
-
-    fd_set connect_sockets;
-    FD_ZERO(&connect_sockets);
-    FD_SET(_socket_fd, &connect_sockets);
-    struct timeval connect_timeout;
-    connect_timeout.tv_sec = timeout_ms / 1000;
-    connect_timeout.tv_usec = (timeout_ms % 1000) * 1000;
-
-    int select_ret = 0;
-    if ((select_ret = select(_socket_fd + 1, NULL, &connect_sockets, NULL, &connect_timeout)) > 0)
-    {
-        if (FD_ISSET(_socket_fd, &connect_sockets) == 0)
-            throw std::runtime_error("connect server timeout");
-
-        int err;
-        socklen_t err_len = sizeof(err);
-        getsockopt(_socket_fd, SOL_SOCKET, SO_ERROR, &err, &err_len);
-        if (err != 0)
-            throw std::runtime_error("connect server failed..");
-    }
-    else
-    {
-        throw std::runtime_error("connect server timeout");
-    }
-
-    return true;
+    cr_common::socket_connect connector(_select_tracker, _listener);
+    return connector(_net_socket, dest_addr, port) == 0;
 }
 
-bool socket_comm_client::disconnect_server()
+bool isocket_comm_client::disconnect_server()
 {
-    if (_socket_fd != -1)
+    if (_net_socket != 0)
     {
-        _select_tracker.del_task(_socket_fd, select_task::TASK_SELECT_READ);
-        _select_tracker.del_task(_socket_fd, select_task::TASK_SELECT_WRITE);
-        _socket_fd = -1;
-        return shutdown(_socket_fd, SHUT_RDWR) == 0;
+        _select_tracker.del_task(*_net_socket, select_task::TASK_SELECT_READ);
+        _select_tracker.del_task(*_net_socket, select_task::TASK_SELECT_WRITE);
+        _net_socket = 0;
+        return shutdown(*_net_socket, SHUT_RDWR) == 0;
     }
 
     return false;
 }
 
-bool socket_comm_client::read()
+bool isocket_comm_client::read()
 {
-    return _read(_socket_fd);
+    return _read(*_net_socket);
 }
 
-bool socket_comm_client::write(const char *buf, size_t size)
+bool isocket_comm_client::write(const char *buf, size_t size)
 {
-    return _write(_socket_fd, buf, size);
+    return _write(*_net_socket, buf, size);
 }
 
-socket_comm_server::~socket_comm_server()
+isocket_comm_server::~isocket_comm_server()
 {
     stop_listen();
-    disconnect_client();
+  //  disconnect_client();
 }
 
-bool socket_comm_server::start_listen(const std::string &path)
+bool isocket_comm_server::start_listen(const std::string &path)
 {
-    _socket_fd = _create_socket(path);
+    _net_socket = _create_socket(path);
 
-    sockaddr_un addr;
-    addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, path.c_str());
-
-    int bind_size;
-    bind_size = offsetof(sockaddr_un, sun_path) + strlen(addr.sun_path);
-    unlink (addr.sun_path);
-    if (bind(_socket_fd, (struct sockaddr *)&addr, bind_size) < 0)
-    {
-        perror("socket bind failed..");
-        throw std::runtime_error("socket bind failed");
-    }
-
-    if (listen(_socket_fd, 5) < 0)
+    if (listen(*_net_socket, 5) < 0)
     {
         perror("socket bind failed...");
         throw std::runtime_error("socket listen failed");
     }
 
-    fcntl(_socket_fd, F_SETFL, O_NONBLOCK);
     this->accept();
 
     return true;
 }
 
-bool socket_comm_server::accept_done(int client_fd)
+bool isocket_comm_server::accept_done(int client_fd)
 {
-    if (_client_fd != -1)
+    if (client_fd != -1)
     {
-        if (_listener) _listener->_client_disconnect(_client_fd);
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_READ);
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_WRITE);
-        shutdown(_client_fd, SHUT_RDWR);
+//        if (_listener) _listener->_client_disconnect(_client_fd);
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_READ);
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_WRITE);
+        shutdown(client_fd, SHUT_RDWR);
     }
-    _client_fd = client_fd;
-    if (_listener) _listener->_client_connect(_client_fd);
+//    if (_listener) _listener->_client_connect(_client_fd);
 }
 
-bool socket_comm_server::stop_listen()
+bool isocket_comm_server::stop_listen()
 {
-    if (_socket_fd != -1)
+    if (_net_socket != 0)
     {
-        _select_tracker.del_task(_socket_fd, select_task::TASK_SELECT_ACCEPT);
-        return shutdown(_socket_fd, SHUT_RDWR) == 0;
-    }
-    return true;
-}
-
-bool socket_comm_server::disconnect_client()
-{
-    if (_client_fd != -1)
-    {
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_READ);
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_WRITE);
-        return shutdown(_client_fd, SHUT_RDWR) == 0;
+        _select_tracker.del_task(*_net_socket, select_task::TASK_SELECT_ACCEPT);
+        return shutdown(*_net_socket, SHUT_RDWR) == 0;
     }
     return true;
 }
 
-bool socket_comm_server::accept()
+bool isocket_comm_server::disconnect_client(int client_fd)
 {
-    typedef bool(socket_comm_server::*func)(int);
+    if (client_fd != -1)
+    {
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_READ);
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_WRITE);
+        return shutdown(client_fd, SHUT_RDWR) == 0;
+    }
+    return true;
+}
+
+void isocket_comm_server::_on_connect(int socket_fd)
+{
+    cr_common::auto_cond cscond(_cond);
+    if (std::find(_client_sockets.begin(), _client_sockets.end(), socket_fd) != _client_sockets.end())
+        _client_sockets.push_back(socket_fd);
+}
+
+void isocket_comm_server::_on_disconnect_server(int socket_fd)
+{
+
+}
+
+void isocket_comm_server::_on_data_receive(int fd, char *buf, size_t size)
+{
+
+}
+
+void isocket_comm_server::_on_data_send(int fd, size_t size)
+{
+
+}
+
+bool isocket_comm_server::accept()
+{
+    fcntl(*_net_socket, F_SETFL, O_NONBLOCK);
     return _select_tracker.add_task(
-                    socket_accept_task<socket_comm_server*, func>::new_instance(_socket_fd, this, &socket_comm_server::accept_done)
+                    socket_accept_task::new_instance(*_net_socket, _listener)
             );
 }
 
-bool socket_comm_server::read()
+bool isocket_comm_server::read(int client_fd)
 {
-    return _read(_client_fd);
+    return _read(client_fd);
 }
 
-bool socket_comm_server::write(const char *buf, size_t size)
+bool isocket_comm_server::write(int client_fd, const char *buf, size_t size)
 {
-    return _write(_client_fd, buf, size);
+    return _write(client_fd, buf, size);
 }

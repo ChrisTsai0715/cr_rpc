@@ -8,13 +8,12 @@ namespace cr_common {
     class inet_socket : public net_socket
     {
     public:
-        inet_socket(socket_type type);
+        inet_socket(stream_type type);
         virtual ~inet_socket(){}
 
     public:
         virtual int init();
         virtual int bind(const std::string& addr);
-
     };
 }
 #endif // INET_SOCKET_H

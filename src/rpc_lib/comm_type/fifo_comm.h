@@ -49,8 +49,8 @@ namespace cr_rpc
         virtual ~fifo_comm_server(){}
 
         virtual bool accept();
-        virtual bool read();
-        virtual bool write(const char* buf, size_t size);
+        virtual bool read(int client_fd);
+        virtual bool write(int client_fd, const char* buf, size_t size);
 
         virtual bool start_listen(const std::string& path);
         virtual bool accept_done(const char *buf, ssize_t size);

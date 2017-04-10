@@ -3,25 +3,13 @@
 
 #include "common/IReference.h"
 #include "select_task.h"
+#include "comm_listener.h"
 
 namespace cr_rpc
 {
-    class comm_server_listener
-    {
-    public:
-        virtual void _client_connect(int client_fd) = 0;
-        virtual void _client_disconnect(int client_fd) = 0;
-        virtual void _client_data_receive(int socket_fd, char* buf, size_t size) = 0;
-        virtual void _client_data_send(int socket_fd, size_t size) = 0;
-    };
-
-    class comm_client_listener
-    {
-    public:
-        virtual void _disconnect_server(int socket_fd) = 0;
-        virtual void _data_receive(int socket_fd, char* buf, size_t size) = 0;
-        virtual void _data_send(int socket_fd, size_t size) = 0;
-    };
+    class select_tracker;
+    class read_task;
+    class write_task;
 
     class base_comm : public CReference
     {
@@ -50,15 +38,14 @@ namespace cr_rpc
                 {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                     {
-                        typedef bool(base_comm::*func)(int, char *, ssize_t);
                         return _select_tracker.add_task(
-                                    read_task<base_comm*, func>::new_instance(id, this, &base_comm::_read_done)
+                                    read_task::new_instance(id, this)
                                     );
-                        return true;
                     }
                     return false;
                 }
-                _read_done(id, read_buf, read_size);
+                if (_listener) _listener->_data_receive(id, read_buf, read_size);
+                //_read_done(id, read_buf, read_size);
             }while(read_size == sizeof read_buf);
 
             return true;
@@ -76,16 +63,15 @@ namespace cr_rpc
                 {
                     if (errno != EAGAIN && errno != EWOULDBLOCK)
                     {
-                        typedef bool(base_comm::*func)(int, ssize_t);
                         return _select_tracker.add_task(
-                               write_task<base_comm*, func>::new_instance(id, this, &base_comm::_write_done, buf, size)
+                               write_task::new_instance(id, this, buf, size)
                                );
-                        return true;
                     }
 
                     return false;
                 }
-                _write_done(id, write_size);
+                if (_listener) _listener->_data_send(id, write_size);
+                //_write_done(id, write_size);
                 size -= write_size;
                 buf  += write_size;
             }while(write_size > 0 && size > 0);
@@ -94,8 +80,8 @@ namespace cr_rpc
         }
 
     public:
-        virtual bool _read_done(int, char*, ssize_t) = 0;
-        virtual bool _write_done(int, ssize_t) = 0;
+  //      virtual bool _read_done(int, char*, ssize_t) = 0;
+  //      virtual bool _write_done(int, ssize_t) = 0;
 
     protected:
         select_tracker _select_tracker;
@@ -106,38 +92,14 @@ namespace cr_rpc
     class base_comm_client : public base_comm
     {
     public:
-        base_comm_client(comm_client_listener* listener)
-            :	_listener(listener)
+        base_comm_client()
         {
 
         }
+
         virtual ~base_comm_client()
         {
 
-        }
-
-        virtual bool _read_done(int id, char* buf, ssize_t size)
-        {
-            if (_listener)
-            {
-                size == 0 ? _listener->_disconnect_server(id)
-                                :
-                            _listener->_data_receive(id, buf, size);
-            }
-
-            return true;
-        }
-
-        virtual bool _write_done(int id, ssize_t size)
-        {
-            if (_listener)
-            {
-                size == -1 ? _listener->_disconnect_server(id)
-                                :
-                             _listener->_data_send(id, size);
-            }
-
-            return true;
         }
 
         virtual bool start_connect(const std::string& path, unsigned int timeout_ms) = 0;
@@ -146,57 +108,41 @@ namespace cr_rpc
         virtual bool read() = 0;
         virtual bool write(const char *buf, size_t size) = 0;
 
-    protected:
-        comm_client_listener* _listener;
+    public:
+        //interface for select task
+        virtual void _on_connect(int client_fd) = 0;
+        virtual void _on_disconnect(int client_fd) = 0;
+        virtual void _on_data_receive(int fd, char* buf, size_t size) = 0;
+        virtual void _on_data_send(int fd, size_t size) = 0;
     };
 
     class base_comm_server : public base_comm
     {
     public:
-        base_comm_server(comm_server_listener* listener)
-            :	_listener(listener)
+        base_comm_server()
         {
 
         }
+
         virtual ~base_comm_server()
         {
 
-        }
-
-        virtual bool _read_done(int id, char* buf, ssize_t size)
-        {
-            if (_listener)
-            {
-                size == 0 ? _listener->_client_disconnect(id)
-                                :
-                            _listener->_client_data_receive(id, buf, size);
-            }
-
-            return true;
-        }
-
-        virtual bool _write_done(int id, ssize_t size)
-        {
-            if (_listener)
-            {
-                size == -1 ? _listener->_client_disconnect(id)
-                                :
-                             _listener->_client_data_send(id, size);
-            }
-
-            return true;
         }
 
         virtual bool start_listen(const std::string&) = 0;
         virtual bool stop_listen() = 0;
 
         virtual bool accept() = 0;
-        virtual bool read() = 0;
-        virtual bool write(const char*, size_t) = 0;
-        virtual bool disconnect_client() = 0;
+        virtual bool read(int client_fd) = 0;
+        virtual bool write(int client_fd, const char*, size_t) = 0;
+        virtual bool disconnect_client(int client_fd) = 0;
 
-    protected:
-        comm_server_listener* _listener;
+    public:
+        //interface for select task
+        virtual void _on_connect(int socket_fd) = 0;
+        virtual void _on_disconnect_server(int socket_fd) = 0;
+        virtual void _on_data_receive(int fd, char* buf, size_t size) = 0;
+        virtual void _on_data_send(int fd, size_t size) = 0;
     };
 }
 

@@ -22,15 +22,15 @@
 
 namespace cr_rpc
 {
-    class unix_socket_comm
+    class unet_socket_comm
     {
     public:
-        unix_socket_comm()
+        unet_socket_comm()
          :   _socket_fd(-1)
         {
         }
 
-        virtual ~unix_socket_comm()
+        virtual ~unet_socket_comm()
         {
             if (_socket_fd != -1)
                 close(_socket_fd);
@@ -43,17 +43,17 @@ namespace cr_rpc
         int _socket_fd;
     };
 
-    class socket_comm_client : protected unix_socket_comm,
-                               public base_comm_client
+    class usocket_comm_client : protected unet_socket_comm,
+                                public base_comm_client
     {
     public:
-        explicit socket_comm_client(comm_client_listener* listener)
+        explicit usocket_comm_client(comm_client_listener* listener)
             :   base_comm_client(listener)
         {
 
         }
 
-        virtual ~socket_comm_client(){}
+        virtual ~usocket_comm_client(){}
 
         virtual bool start_connect(const std::string& path, unsigned int timeout_ms);
         virtual bool disconnect_server();
@@ -62,30 +62,26 @@ namespace cr_rpc
         virtual bool write(const char *buf, size_t size);
     };
 
-    class socket_comm_server : protected unix_socket_comm,
-                               public base_comm_server
+    class usocket_comm_server : protected unet_socket_comm,
+                                public base_comm_server
     {
     public:
-        explicit socket_comm_server(comm_server_listener* listener)
-            :   base_comm_server(listener),
-                _client_fd(-1)
+        explicit usocket_comm_server(comm_server_listener* listener)
+            :   base_comm_server(listener)
         {
 
         }
 
-        virtual ~socket_comm_server();
+        virtual ~usocket_comm_server();
 
         virtual bool accept();
-        virtual bool read();
-        virtual bool write(const char* buf, size_t size);
+        virtual bool read(int client_fd);
+        virtual bool write(int client_fd, const char* buf, size_t size);
 
         virtual bool start_listen(const std::string& path);
         virtual bool accept_done(int client_fd);
         virtual bool stop_listen();
-        virtual bool disconnect_client();
-
-    private:
-        int _client_fd;
+        virtual bool disconnect_client(int client_fd);
     };
 }
 #endif // UNIX_SOCKET_COMM_H

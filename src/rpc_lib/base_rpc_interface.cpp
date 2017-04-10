@@ -9,7 +9,7 @@ using namespace cr_rpc;
  *          my_rpc_interface
  *
  * *************************************************/
-base_rpc_interface::base_rpc_interface()
+base_rpc::base_rpc()
     :   _divide_unread_size(0),
         _rpc_handler(this),
         _socket_path("/tmp/")
@@ -17,21 +17,21 @@ base_rpc_interface::base_rpc_interface()
 
 }
 
-base_rpc_interface::~base_rpc_interface()
+base_rpc::~base_rpc()
 {
     _rpc_handler.stop();
 }
 
-bool base_rpc_interface::_receive_data_handle(char *buf, size_t size)
+bool base_rpc::_receive_data_handle(char *buf, size_t size)
 {
     std::vector<rpc_req_args_type> rpc_req_args_vec;
     if (!_req_msg_parse(buf, size, rpc_req_args_vec))
         return false;
 
-    return _rpc_handler._push_req_map<std::vector<rpc_req_args_type>, std::vector<rpc_req_args_type>::iterator>(rpc_req_args_vec);
+    return _rpc_handler._push_req_map<std::vector<rpc_req_args_type> >(rpc_req_args_vec);
 }
 
-bool base_rpc_interface::_reg_services(const std::string &service_name, base_rpc_service *service)
+bool base_rpc::reg_services(const std::string &service_name, base_rpc_service *service)
 {
     assert(((u_int64_t)service) * service_name.size());
 
@@ -40,7 +40,7 @@ bool base_rpc_interface::_reg_services(const std::string &service_name, base_rpc
     return true;
 }
 
-bool base_rpc_interface::_format_req_msg(const std::string& cmd, rpc_req_args_type &req_map, std::string &value)
+bool base_rpc::_format_req_msg(const std::string& cmd, rpc_req_args_type &req_map, std::string &value)
 {
     assert(cmd.size());
 
@@ -60,7 +60,7 @@ bool base_rpc_interface::_format_req_msg(const std::string& cmd, rpc_req_args_ty
     return true;
 }
 
-bool base_rpc_interface::_req_msg_parse(const char *req_msg, size_t size, std::vector<rpc_req_args_type> &req_map_vec)
+bool base_rpc::_req_msg_parse(const char *req_msg, size_t size, std::vector<rpc_req_args_type> &req_map_vec)
 {
     std::list<Json::Value> json_value_list;
     void* unread_ptr = 0;
@@ -106,7 +106,7 @@ bool base_rpc_interface::_req_msg_parse(const char *req_msg, size_t size, std::v
     return true;
 }
 
-int base_rpc_interface::_divide_req_msg(const void *req_msg, size_t size, std::list<Json::Value>& json_value_list, void **unread_ptr)
+int base_rpc::_divide_req_msg(const void *req_msg, size_t size, std::list<Json::Value>& json_value_list, void **unread_ptr)
 {
     size_t index = 0;
     for (; index < size; index ++)
@@ -136,19 +136,19 @@ int base_rpc_interface::_divide_req_msg(const void *req_msg, size_t size, std::l
     return this->_divide_req_msg(((char *)req_msg) + index + 1, size - index - 1, json_value_list, unread_ptr);
 }
 
-bool base_rpc_interface::rpc_data_handle_thread::_push_req_map(const rpc_req_args_type &req_map)
+bool base_rpc::rpc_data_handle_thread::_push_req_map(const rpc_req_args_type &req_map)
 {
     cr_common::auto_cond cscond(_req_map_cond);
     _req_map_lists.push_back(req_map);
     return _req_map_cond.signal() == 0;
 }
 
-template<typename T, typename K>
-bool base_rpc_interface::rpc_data_handle_thread::_push_req_map(T &req_maps)
+template<typename T>
+bool base_rpc::rpc_data_handle_thread::_push_req_map(T &req_maps)
 {
     if (req_maps.size() == 0) return true;
     cr_common::auto_cond cscond(_req_map_cond);
-    K it = req_maps.begin();
+    auto it = req_maps.begin();
     for(; it != req_maps.end(); it ++)
     {
         _req_map_lists.push_back(*it);
@@ -156,21 +156,27 @@ bool base_rpc_interface::rpc_data_handle_thread::_push_req_map(T &req_maps)
     return _req_map_cond.signal() == 0;
 }
 
-bool base_rpc_interface::rpc_data_handle_thread::thread_loop()
+bool base_rpc::rpc_data_handle_thread::thread_loop()
 {
-    cr_common::auto_cond cscond(_req_map_cond);
-    if (_req_map_lists.size() == 0)
+    std::list<rpc_req_args_type> req_map_lists;
     {
-        if (_req_map_cond.time_wait(1000) == 0)
+        cr_common::auto_cond cscond(_req_map_cond);
+        if (_req_map_lists.size() == 0)
         {
-            if (_req_map_lists.size() == 0)
-                return true;
+            if (_req_map_cond.time_wait(1000) == 0)
+            {
+                if (_req_map_lists.size() == 0)
+                    return true;
+            }
+            else return true;
         }
-        else return true;
+
+         req_map_lists = _req_map_lists;
+         _req_map_lists.clear();
     }
 
-    std::list<rpc_req_args_type>::iterator it = _req_map_lists.begin();
-    for (; it != _req_map_lists.end(); it ++)
+    std::list<rpc_req_args_type>::iterator it = req_map_lists.begin();
+    for (; it != req_map_lists.end(); it ++)
     {
         if (_outer->_services.find((*it)["rpc_service"]) == _outer->_services.end())
             continue;
@@ -183,7 +189,7 @@ bool base_rpc_interface::rpc_data_handle_thread::thread_loop()
         }
     }
 
-    _req_map_lists.clear();
+    req_map_lists.clear();
 
     return true;
 }

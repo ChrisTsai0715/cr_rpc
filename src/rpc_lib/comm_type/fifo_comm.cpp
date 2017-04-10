@@ -18,9 +18,8 @@ int fifo_comm::_create_path(const std::string &path)
  * ****************************/
 bool fifo_comm_server::accept()
 {
-    typedef bool(fifo_comm_server::*func)(const char*, ssize_t);
     return _select_tracker.add_task(
-                    fifo_accept_task<fifo_comm_server*, func>::new_instance(_accept_fd, this, &fifo_comm_server::accept_done)
+                    fifo_accept_task::new_instance(_accept_fd, _listener)
                 );
 }
 
@@ -74,8 +73,8 @@ bool fifo_comm_server::accept_done(const char* buf, ssize_t size)
         this->read();
     }
 
-    if (_listener)
-        _listener->_client_connect(_client_pid);
+//    if (_listener)
+//        _listener->_client_connect(_client_pid);
 
     return true;
 }
@@ -108,7 +107,9 @@ bool fifo_comm_server::_read_done(int id, char *buf, ssize_t size)
         return true;
     }
 
-    return base_comm_server::_read_done(id, buf, size);
+
+    return true;
+    //return base_comm_server::_read_done(id, buf, size);
 }
 
 /* ****************************
@@ -126,7 +127,7 @@ bool fifo_comm_client::start_connect(const std::string &path, unsigned int timeo
 
     pid_t my_pid = getpid();
     char pid_buf[20] = {0};
-    sprintf(pid_buf, "%d", my_pid);
+    sprintf(pid_buf, "%d\n", my_pid);
     char read_path[20] = {0};
     char write_path[20] = {0};
     sprintf(read_path, "/tmp/%d_s2c", my_pid);
@@ -218,5 +219,6 @@ bool fifo_comm_client::_read_done(int id, char *buf, ssize_t size)
         return true;
     }
 
-    return base_comm_client::_read_done(id, buf, size);
+    return true;
+//    return base_comm_client::_read_done(id, buf, size);
 }

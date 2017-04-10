@@ -9,26 +9,40 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <netinet/in.h>
 #include "common/cslock.h"
 #include "common/ccondition.h"
 #include "common/base_thread.h"
 #include "common/IReference.h"
+#include "comm_listener.h"
+#include "cr_socket/net_socket.h"
 
 namespace cr_rpc
 {
-    template<typename T, typename K>
+    class comm_base_listener;
+    class comm_server_listener;
+    class comm_client_listener;
+
     class select_event
     {
     public:
-        select_event(T class_ptr, K class_func)
-            :   _class_ptr(class_ptr),
-                _class_func(class_func)
+        select_event(comm_base_listener* listener)
+            :   _listener(listener)
         {
         }
 
     protected:
-        T _class_ptr;
-        K _class_func;
+        template<typename T>
+        T* _get_listener()
+        {
+            if (_listener == 0)
+                return NULL;
+
+            return dynamic_cast<T*>(_listener);
+        }
+
+    protected:
+        comm_base_listener* _listener;
     };
 
     class select_task : public CReference
@@ -57,145 +71,120 @@ namespace cr_rpc
         int _socket_fd;
     };
 
-    template<typename T, typename K>
     class socket_accept_task : public select_task,
-                        public select_event<T,K>
+                        public select_event
     {
     public:
-        static socket_accept_task* new_instance(int listen_fd, T class_ptr, K class_func)
+        static socket_accept_task* new_instance(int listen_fd, comm_base_listener* listener)
         {
-            return new socket_accept_task(listen_fd, class_ptr, class_func);
+            return new socket_accept_task(listen_fd, listener);
         }
 
     private:
-        socket_accept_task(int listen_fd, T class_ptr, K class_func)
+        socket_accept_task(int listen_fd, comm_base_listener* listener)
             :   select_task(select_task::TASK_SELECT_ACCEPT, listen_fd),
-                select_event<T,K>(class_ptr, class_func)
+                select_event(listener)
         {
         }
 
         virtual ~socket_accept_task(){}
-        virtual bool done()
-        {
-            struct sockaddr_un client_addr;
-            socklen_t addr_len = sizeof(client_addr);
-            int client_fd = ::accept(_socket_fd, (struct sockaddr *)&client_addr, &addr_len);
-            if (client_fd < 0)
-            {
-                ::perror("accept err");
-                return false;
-            }
-            ((this->_class_ptr)->*(this->_class_func))(client_fd);
-
-            return true;
-        }
+        virtual bool done();
     };
 
-    template<typename T, typename K>
     class fifo_accept_task : public select_task,
-                             public select_event<T,K>
+                             public select_event
     {
     public:
-        static fifo_accept_task* new_instance(int listen_fd, T class_ptr, K class_func)
+        static fifo_accept_task* new_instance(int listen_fd, comm_base_listener* listener)
         {
-            return new fifo_accept_task(listen_fd, class_ptr, class_func);
+            return new fifo_accept_task(listen_fd, listener);
         }
 
     private:
-        fifo_accept_task(int listen_fd, T class_ptr, K class_func)
+        fifo_accept_task(int listen_fd, comm_base_listener* listener)
             :   select_task(select_task::TASK_SELECT_ACCEPT, listen_fd),
-                select_event<T,K>(class_ptr, class_func)
+                select_event(listener)
         {
         }
 
         virtual ~fifo_accept_task(){}
-        virtual bool done()
-        {
-            char read_buf[512] = {0};
-            ssize_t size = ::read(_socket_fd, read_buf, sizeof read_buf);
-            ((this->_class_ptr)->*(this->_class_func))(read_buf, size);
-
-            return true;
-        }
+        virtual bool done();
     };
 
-    template<typename T, typename K>
-    class read_task : public select_task,
-                      public select_event<T,K>
+    class socket_connect_task : public select_task,
+                                public select_event
     {
     public:
-        static read_task* new_instance(int read_fd, T class_ptr, K class_func)
+        static socket_connect_task* new_instance(int connect_fd, comm_base_listener* listener, uint32_t dest_addr, uint16_t port)
         {
-            return new read_task(read_fd, class_ptr, class_func);
+            return new socket_connect_task(connect_fd, listener, dest_addr, port);
         }
 
     private:
-        read_task(int read_fd, T class_ptr, K class_func)
+        socket_connect_task(int connect_fd, comm_base_listener* listener, uint32_t dest_addr, uint16_t port)
+            :   select_task(select_task::TASK_SELECT_ACCEPT, connect_fd),
+                select_event(listener),
+                _dest_addr(dest_addr),
+                _port(port)
+        {
+        }
+
+        socket_connect_task(int connect_fd, comm_base_listener* listener, const char* dest_addr)
+            :   select_task(select_task::TASK_SELECT_ACCEPT, connect_fd),
+                select_event(listener),
+                _dest_addr_unix(dest_addr)
+        {
+        }
+
+        virtual ~socket_connect_task(){}
+        virtual bool done();
+    private:
+        uint32_t _dest_addr;
+        uint16_t _port;
+        std::string _dest_addr_unix;
+    };
+
+    class read_task : public select_task,
+                      public select_event
+    {
+    public:
+        static read_task* new_instance(int read_fd, comm_base_listener* listener)
+        {
+            return new read_task(read_fd, listener);
+        }
+
+    private:
+        read_task(int read_fd, comm_base_listener* listener)
             :   select_task(select_task::TASK_SELECT_READ, read_fd),
-                select_event<T,K>(class_ptr, class_func)
+                select_event(listener)
         {
 
         }
 
         virtual ~read_task(){}
-        virtual bool done()
-        {
-            char buf[1024] = {0};
-            size_t size = 0;
-            do
-            {
-                size = ::read(_socket_fd, buf, sizeof(buf));
-                ((this->_class_ptr)->*(this->_class_func))(_socket_fd, buf, size);
-            }while(size == sizeof(buf));
-
-            return true;
-        }
+        virtual bool done();
     };
 
-    template<typename T, typename K>
     class write_task : public select_task,
-                       public select_event<T,K>
+                       public select_event
     {
     public:
-        static write_task* new_instance(int write_fd, T class_ptr, K class_func, const char* buf, size_t size)
-
+        static write_task* new_instance(int write_fd, comm_base_listener* listener, const char* buf, size_t size)
         {
-
-            return new write_task(write_fd, class_ptr, class_func, buf, size);
+            return new write_task(write_fd, listener, buf, size);
         }
 
     private:
-        write_task(int write_fd, T class_ptr, K class_func, const char* buf, size_t size)
+        write_task(int write_fd, comm_base_listener* listener, const char* buf, size_t size)
             :   select_task(select_task::TASK_SELECT_WRITE, write_fd),
-        select_event<T,K>(class_ptr, class_func),
+        select_event(listener),
         _send_size(size)
         {
             _send_buf = new char[size];
             ::memcpy(_send_buf, buf, size);
         }
         virtual ~write_task(){}
-        virtual bool done()
-        {
-            ssize_t size;
-            do
-            {
-                size = ::write(_socket_fd, _send_buf, _send_size);
-                if(size == -1)
-                {
-                    if (errno != EAGAIN && errno != EWOULDBLOCK)
-                        ((this->_class_ptr)->*(this->_class_func))(_socket_fd, -1);
-
-                    return false;
-                }
-                ((this->_class_ptr)->*(this->_class_func))(_socket_fd, size);
-                _send_size -= size;
-                _send_buf += size;
-            }while(_send_size > 0 && size > 0);
-
-            delete []_send_buf;
-
-            return true;
-        }
+        virtual bool done();
 
     private:
         char*  _send_buf;

@@ -1,9 +1,9 @@
-#include "socket_comm.h"
+#include "unix_socket_comm.h"
 #include <signal.h>
 
 using namespace cr_rpc;
 
-int unix_socket_comm::_create_socket(const std::string &path)
+int unet_socket_comm::_create_socket(const std::string &path)
 {
     assert(path.size());
 
@@ -25,7 +25,7 @@ int unix_socket_comm::_create_socket(const std::string &path)
     return fd;
 }
 
-bool socket_comm_client::start_connect(const std::string &path, unsigned int timeout_ms)
+bool usocket_comm_client::start_connect(const std::string &path, unsigned int timeout_ms)
 {
     _socket_fd = _create_socket(path);
 
@@ -72,7 +72,7 @@ bool socket_comm_client::start_connect(const std::string &path, unsigned int tim
     return true;
 }
 
-bool socket_comm_client::disconnect_server()
+bool usocket_comm_client::disconnect_server()
 {
     if (_socket_fd != -1)
     {
@@ -85,23 +85,23 @@ bool socket_comm_client::disconnect_server()
     return false;
 }
 
-bool socket_comm_client::read()
+bool usocket_comm_client::read()
 {
     return _read(_socket_fd);
 }
 
-bool socket_comm_client::write(const char *buf, size_t size)
+bool usocket_comm_client::write(const char *buf, size_t size)
 {
     return _write(_socket_fd, buf, size);
 }
 
-socket_comm_server::~socket_comm_server()
+usocket_comm_server::~usocket_comm_server()
 {
     stop_listen();
-    disconnect_client();
+ //   disconnect_client();
 }
 
-bool socket_comm_server::start_listen(const std::string &path)
+bool usocket_comm_server::start_listen(const std::string &path)
 {
     _socket_fd = _create_socket(path);
 
@@ -130,20 +130,19 @@ bool socket_comm_server::start_listen(const std::string &path)
     return true;
 }
 
-bool socket_comm_server::accept_done(int client_fd)
+bool usocket_comm_server::accept_done(int client_fd)
 {
-    if (_client_fd != -1)
+    if (client_fd != -1)
     {
-        if (_listener) _listener->_client_disconnect(_client_fd);
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_READ);
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_WRITE);
-        shutdown(_client_fd, SHUT_RDWR);
+//        if (listener != NULL) listener->_client_disconnect(_client_fd);
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_READ);
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_WRITE);
+        shutdown(client_fd, SHUT_RDWR);
     }
-    _client_fd = client_fd;
-    if (_listener) _listener->_client_connect(_client_fd);
+//    if (_listener) _listener->_client_connect(_client_fd);
 }
 
-bool socket_comm_server::stop_listen()
+bool usocket_comm_server::stop_listen()
 {
     if (_socket_fd != -1)
     {
@@ -153,31 +152,30 @@ bool socket_comm_server::stop_listen()
     return true;
 }
 
-bool socket_comm_server::disconnect_client()
+bool usocket_comm_server::disconnect_client(int client_fd)
 {
-    if (_client_fd != -1)
+    if (client_fd != -1)
     {
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_READ);
-        _select_tracker.del_task(_client_fd, select_task::TASK_SELECT_WRITE);
-        return shutdown(_client_fd, SHUT_RDWR) == 0;
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_READ);
+        _select_tracker.del_task(client_fd, select_task::TASK_SELECT_WRITE);
+        return shutdown(client_fd, SHUT_RDWR) == 0;
     }
     return true;
 }
 
-bool socket_comm_server::accept()
+bool usocket_comm_server::accept()
 {
-    typedef bool(socket_comm_server::*func)(int);
     return _select_tracker.add_task(
-                    socket_accept_task<socket_comm_server*, func>::new_instance(_socket_fd, this, &socket_comm_server::accept_done)
+                    socket_accept_task::new_instance(_socket_fd, _listener)
             );
 }
 
-bool socket_comm_server::read()
+bool usocket_comm_server::read(int client_fd)
 {
-    return _read(_client_fd);
+    return _read(client_fd);
 }
 
-bool socket_comm_server::write(const char *buf, size_t size)
+bool usocket_comm_server::write(int client_fd, const char *buf, size_t size)
 {
-    return _write(_client_fd, buf, size);
+    return _write(client_fd, buf, size);
 }

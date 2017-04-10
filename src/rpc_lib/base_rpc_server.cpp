@@ -1,31 +1,34 @@
 #include "base_rpc_server.h"
 
 using namespace cr_rpc;
-base_rpc_server::base_rpc_server(rpc_comm_type_def type)
+
+rpc_server::rpc_server(rpc_comm_type_def type)
 {
     switch(type)
     {
     default:
-    case RPC_COMM_TYPE_SOCKET:
-        _unix_comm_server = new socket_comm_server(this);
+    case RPC_COMM_TYPE_INET:
+        _comm_server = new isocket_comm_server(this);
         break;
+    case RPC_COMM_TYPE_UNIX:
+        _comm_server = new usocket_comm_server(this);
 
     case RPC_COMM_TYPE_FIFO:
-        _unix_comm_server = new fifo_comm_server(this);
+        _comm_server = new fifo_comm_server(this);
         break;
     }
 }
 
-base_rpc_server::~base_rpc_server()
+rpc_server::~rpc_server()
 {
 
 }
 
-bool base_rpc_server::start_listen()
+bool rpc_server::start_listen()
 {
     try
     {
-        _unix_comm_server->start_listen(_socket_path);
+        _comm_server->start_listen(_socket_path);
         _rpc_handler.run();
     }
     catch(std::runtime_error& e)
@@ -37,36 +40,36 @@ bool base_rpc_server::start_listen()
     return true;
 }
 
-bool base_rpc_server::send_req(const std::string &cmd, rpc_req_args_type &req_map)
+bool rpc_server::send_req(const std::string &cmd, rpc_req_args_type &req_map)
 {
     std::string json_str;
     _format_req_msg(cmd, req_map, json_str);
 
-    return _unix_comm_server->write(json_str.c_str(), json_str.size());
+    return _comm_server->write(json_str.c_str(), json_str.size());
 }
 
-void base_rpc_server::_client_connect(int fd)
-{
-    fd = fd;
-    _unix_comm_server->accept();
-    _unix_comm_server->read();
-}
-
-void base_rpc_server::_client_disconnect(int fd)
-{
-    fd = fd;
-    _unix_comm_server->disconnect_client();
-}
-
-void base_rpc_server::_client_data_receive(int fd, char *buf, size_t size)
+void rpc_server::_data_receive(int fd, char *buf, size_t size)
 {
     fd = fd;
     _receive_data_handle(buf, size);
-    _unix_comm_server->read();
+    _comm_server->read();
 }
 
-void base_rpc_server::_client_data_send(int fd, size_t size)
+void rpc_server::_data_send(int fd, size_t size)
 {
     fd = fd;
     size = size;
+}
+
+void rpc_server::_client_connect(int client_fd)
+{
+    if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) == _client_fd_lists.end())
+        _client_fd_lists.push_back(client_fd);
+    _comm_server->accept();
+}
+
+void rpc_server::_client_disconnect(int client_fd)
+{
+    if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) != _client_fd_lists.end())
+        _comm_server->disconnect_client(client_fd);
 }

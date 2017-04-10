@@ -11,7 +11,8 @@ namespace cr_common {
     class unix_socket : public net_socket
     {
     public:
-        unix_socket(socket_type type);
+        unix_socket(stream_type type);
+        virtual ~unix_socket(){}
 
         virtual int init();
         virtual int bind(const std::string &addr);

@@ -2,7 +2,7 @@
 #define BASE_RPC_CLIENT_H
 
 #include "base_rpc_interface.h"
-#include "socket_comm.h"
+#include "comm_type/inet_socket_comm.h"
 #include "fifo_comm.h"
 #include "common/IReference.h"
 
@@ -18,12 +18,12 @@ namespace cr_rpc
      *
      * ****************/
 
-    class base_rpc_client : protected base_rpc_interface,
+    class rpc_client : protected base_rpc,
                             public comm_client_listener
     {
     public:
-        explicit base_rpc_client(rpc_comm_type_def type = RPC_COMM_TYPE_SOCKET);
-        virtual ~base_rpc_client();
+        explicit rpc_client(rpc_comm_type_def type = RPC_COMM_TYPE_INET);
+        virtual ~rpc_client();
         bool start_connect();
 
     public:
@@ -31,6 +31,7 @@ namespace cr_rpc
 
     public:
         virtual void _disconnect_server(int fd);
+        virtual void _connect(int socket_fd);
         virtual void _data_receive(int fd, char* buf, size_t size);
         virtual void _data_send(int fd, size_t size);
 

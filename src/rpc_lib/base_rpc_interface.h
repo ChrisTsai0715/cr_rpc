@@ -3,13 +3,16 @@
 
 #include <stdio.h>
 #include <string>
+#include <string.h>
 #include <map>
 #include <errno.h>
 #include <stdexcept>
 #include <stddef.h>
+#include <unistd.h>
+#include <assert.h>
+#include <list>
 #include "base_rpc_service.h"
-#include "socket_comm.h"
-#include "fifo_comm.h"
+#include "cr_socket/inet_socket.h"
 #include "common/base_thread.h"
 #include "common/ccondition.h"
 #include "common/IReference.h"
@@ -20,20 +23,22 @@ namespace cr_rpc
     typedef enum
     {
         RPC_COMM_TYPE_FIFO,
-        RPC_COMM_TYPE_SOCKET,
+        RPC_COMM_TYPE_INET,
+        RPC_COMM_TYPE_UNIX,
     }rpc_comm_type_def;
 
     typedef std::map<std::string, std::string> rpc_req_args_type;
 
-    class base_rpc_interface
+    class base_rpc
     {
     public:
-        base_rpc_interface();
-        virtual ~base_rpc_interface();
+        base_rpc();
+        virtual ~base_rpc();
+
         void set_unix_sock_path(const std::string& path) {_socket_path = path;}
+        bool reg_services(const std::string& service_name, base_rpc_service* service);
 
     protected:
-        bool _reg_services(const std::string& service_name, base_rpc_service* service);
         bool _format_req_msg(const std::string &cmd, rpc_req_args_type &req_map, std::string &value);
         bool _req_msg_parse(const char* req_msg, size_t size, std::vector<rpc_req_args_type>& req_map_vec);
         bool _receive_data_handle(char *buf, size_t size);
@@ -52,7 +57,7 @@ namespace cr_rpc
         class rpc_data_handle_thread : private base_thread
         {
         public:
-            rpc_data_handle_thread(base_rpc_interface* outer)
+            rpc_data_handle_thread(base_rpc* outer)
                 :   _outer(outer)
             {}
             virtual ~rpc_data_handle_thread(){}
@@ -71,7 +76,7 @@ namespace cr_rpc
             }
 
             bool _push_req_map(const rpc_req_args_type &req_map);
-            template<typename T, typename K>
+            template<typename T>
             bool _push_req_map(T& req_maps);
 
         private:
@@ -80,7 +85,7 @@ namespace cr_rpc
         private:
             cr_common::condition _req_map_cond;
             std::list<rpc_req_args_type>_req_map_lists;
-            base_rpc_interface* _outer;
+            base_rpc* _outer;
         }_rpc_handler;
 
     protected:
