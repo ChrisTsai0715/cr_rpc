@@ -63,7 +63,6 @@ namespace cr_rpc
     {
     public:
         explicit isocket_comm_client(comm_client_listener* listener)
-            :   base_comm_client(listener)
         {
 
         }
@@ -75,6 +74,13 @@ namespace cr_rpc
 
         virtual bool read();
         virtual bool write(const char *buf, size_t size);
+
+    public:
+        //implement comm interface
+        virtual void _on_connect(int client_fd);
+        virtual void _on_disconnect(int client_fd);
+        virtual void _on_data_receive(int, char*, ssize_t);
+        virtual void _on_data_send(int, ssize_t);
     };
 
     class isocket_comm_server : protected inet_socket_comm,
@@ -82,7 +88,6 @@ namespace cr_rpc
     {
     public:
         explicit isocket_comm_server(comm_server_listener* listener)
-            :   base_comm_server(listener)
         {
 
         }
@@ -102,8 +107,8 @@ namespace cr_rpc
         //impelement comm interface
         virtual void _on_connect(int socket_fd);
         virtual void _on_disconnect_server(int socket_fd);
-        virtual void _on_data_receive(int fd, char* buf, size_t size);
-        virtual void _on_data_send(int fd, size_t size);
+        virtual void _on_data_receive(int fd, char* buf, ssize_t size);
+        virtual void _on_data_send(int fd, ssize_t size);
 
     private:
         std::list<int> _client_sockets;

@@ -1,4 +1,5 @@
 #include "base_rpc_server.h"
+#include <algorithm>
 
 using namespace cr_rpc;
 
@@ -11,10 +12,10 @@ rpc_server::rpc_server(rpc_comm_type_def type)
         _comm_server = new isocket_comm_server(this);
         break;
     case RPC_COMM_TYPE_UNIX:
-        _comm_server = new usocket_comm_server(this);
+ //       _comm_server = new usocket_comm_server(this);
 
     case RPC_COMM_TYPE_FIFO:
-        _comm_server = new fifo_comm_server(this);
+  //      _comm_server = new fifo_comm_server(this);
         break;
     }
 }

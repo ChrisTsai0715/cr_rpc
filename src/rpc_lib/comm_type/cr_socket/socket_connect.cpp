@@ -4,7 +4,7 @@
 
 using namespace cr_common;
 
-socket_connect::socket_connect(cr_rpc::select_tracker& tracker, cr_rpc::comm_base_listener *listener)
+socket_connect::socket_connect(cr_rpc::select_tracker& tracker, cr_rpc::base_comm *listener)
     :	_tracker(tracker),
         _listener(listener)
 {

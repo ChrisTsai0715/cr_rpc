@@ -16,17 +16,14 @@
 #include "common/IReference.h"
 #include "comm_listener.h"
 #include "cr_socket/net_socket.h"
+#include "base_comm.h"
 
 namespace cr_rpc
 {
-    class comm_base_listener;
-    class comm_server_listener;
-    class comm_client_listener;
-
     class select_event
     {
     public:
-        select_event(comm_base_listener* listener)
+        select_event(base_comm* listener)
             :   _listener(listener)
         {
         }
@@ -42,7 +39,7 @@ namespace cr_rpc
         }
 
     protected:
-        comm_base_listener* _listener;
+        base_comm* _listener;
     };
 
     class select_task : public CReference
@@ -75,13 +72,13 @@ namespace cr_rpc
                         public select_event
     {
     public:
-        static socket_accept_task* new_instance(int listen_fd, comm_base_listener* listener)
+        static socket_accept_task* new_instance(int listen_fd, base_comm* listener)
         {
             return new socket_accept_task(listen_fd, listener);
         }
 
     private:
-        socket_accept_task(int listen_fd, comm_base_listener* listener)
+        socket_accept_task(int listen_fd, base_comm* listener)
             :   select_task(select_task::TASK_SELECT_ACCEPT, listen_fd),
                 select_event(listener)
         {
@@ -95,13 +92,13 @@ namespace cr_rpc
                              public select_event
     {
     public:
-        static fifo_accept_task* new_instance(int listen_fd, comm_base_listener* listener)
+        static fifo_accept_task* new_instance(int listen_fd, base_comm* listener)
         {
             return new fifo_accept_task(listen_fd, listener);
         }
 
     private:
-        fifo_accept_task(int listen_fd, comm_base_listener* listener)
+        fifo_accept_task(int listen_fd, base_comm* listener)
             :   select_task(select_task::TASK_SELECT_ACCEPT, listen_fd),
                 select_event(listener)
         {
@@ -115,13 +112,13 @@ namespace cr_rpc
                                 public select_event
     {
     public:
-        static socket_connect_task* new_instance(int connect_fd, comm_base_listener* listener, uint32_t dest_addr, uint16_t port)
+        static socket_connect_task* new_instance(int connect_fd, base_comm* listener, uint32_t dest_addr, uint16_t port)
         {
             return new socket_connect_task(connect_fd, listener, dest_addr, port);
         }
 
     private:
-        socket_connect_task(int connect_fd, comm_base_listener* listener, uint32_t dest_addr, uint16_t port)
+        socket_connect_task(int connect_fd, base_comm* listener, uint32_t dest_addr, uint16_t port)
             :   select_task(select_task::TASK_SELECT_ACCEPT, connect_fd),
                 select_event(listener),
                 _dest_addr(dest_addr),
@@ -129,7 +126,7 @@ namespace cr_rpc
         {
         }
 
-        socket_connect_task(int connect_fd, comm_base_listener* listener, const char* dest_addr)
+        socket_connect_task(int connect_fd, base_comm* listener, const char* dest_addr)
             :   select_task(select_task::TASK_SELECT_ACCEPT, connect_fd),
                 select_event(listener),
                 _dest_addr_unix(dest_addr)
@@ -148,13 +145,13 @@ namespace cr_rpc
                       public select_event
     {
     public:
-        static read_task* new_instance(int read_fd, comm_base_listener* listener)
+        static read_task* new_instance(int read_fd, base_comm* listener)
         {
             return new read_task(read_fd, listener);
         }
 
     private:
-        read_task(int read_fd, comm_base_listener* listener)
+        read_task(int read_fd, base_comm* listener)
             :   select_task(select_task::TASK_SELECT_READ, read_fd),
                 select_event(listener)
         {
@@ -169,13 +166,13 @@ namespace cr_rpc
                        public select_event
     {
     public:
-        static write_task* new_instance(int write_fd, comm_base_listener* listener, const char* buf, size_t size)
+        static write_task* new_instance(int write_fd, base_comm* listener, const char* buf, size_t size)
         {
             return new write_task(write_fd, listener, buf, size);
         }
 
     private:
-        write_task(int write_fd, comm_base_listener* listener, const char* buf, size_t size)
+        write_task(int write_fd, base_comm* listener, const char* buf, size_t size)
             :   select_task(select_task::TASK_SELECT_WRITE, write_fd),
         select_event(listener),
         _send_size(size)
@@ -189,37 +186,6 @@ namespace cr_rpc
     private:
         char*  _send_buf;
         size_t _send_size;
-    };
-
-    class select_tracker : private base_thread
-    {
-    public:
-        select_tracker();
-        bool add_task(CRefObj<select_task> task);
-        bool del_task(CRefObj<select_task> task);
-        bool del_task(int socket_fd, int task_type);
-
-        virtual bool run()
-        {
-            _stop_flag = false;
-            return base_thread::run();
-        }
-
-        virtual bool stop()
-        {
-            _stop_flag = true;
-            return base_thread::stop();
-        }
-
-    private:
-        virtual bool thread_loop();
-
-    private:
-        typedef std::list<CRefObj<select_task> > select_task_list_type;
-        cr_common::condition  _task_cond;
-        select_task_list_type _uncomplete_task_lists;
-        select_task_list_type _complete_task_lists;
-        bool _stop_flag;
     };
 }
 #endif // SELECT_TASK_H

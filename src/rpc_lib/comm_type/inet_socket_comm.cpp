@@ -1,5 +1,6 @@
 #include "inet_socket_comm.h"
 #include <signal.h>
+#include <algorithm>
 #include "cr_socket/inet_socket.h"
 #include "cr_socket/socket_connect.h"
 
@@ -27,7 +28,7 @@ bool isocket_comm_client::start_connect(const std::string &path, unsigned int ti
     if (!_get_addr_port(path, port, dest_addr))
         return false;
 
-    cr_common::socket_connect connector(_select_tracker, _listener);
+    cr_common::socket_connect connector(_select_tracker, this);
     return connector(_net_socket, dest_addr, port) == 0;
 }
 
@@ -52,6 +53,26 @@ bool isocket_comm_client::read()
 bool isocket_comm_client::write(const char *buf, size_t size)
 {
     return _write(*_net_socket, buf, size);
+}
+
+void isocket_comm_client::_on_connect(int client_fd)
+{
+
+}
+
+void isocket_comm_client::_on_disconnect(int client_fd)
+{
+
+}
+
+void isocket_comm_client::_on_data_receive(int, char *, ssize_t)
+{
+
+}
+
+void isocket_comm_client::_on_data_send(int, ssize_t)
+{
+
 }
 
 isocket_comm_server::~isocket_comm_server()
@@ -117,15 +138,17 @@ void isocket_comm_server::_on_connect(int socket_fd)
 
 void isocket_comm_server::_on_disconnect_server(int socket_fd)
 {
-
+    cr_common::auto_cond cscond(_cond);
+    if (std::find(_client_sockets.begin(), _client_sockets.end(), socket_fd) != _client_sockets.end())
+        _client_sockets.remove(socket_fd);
 }
 
-void isocket_comm_server::_on_data_receive(int fd, char *buf, size_t size)
+void isocket_comm_server::_on_data_receive(int fd, char *buf, ssize_t size)
 {
 
 }
 
-void isocket_comm_server::_on_data_send(int fd, size_t size)
+void isocket_comm_server::_on_data_send(int fd, ssize_t size)
 {
 
 }
@@ -134,7 +157,7 @@ bool isocket_comm_server::accept()
 {
     fcntl(*_net_socket, F_SETFL, O_NONBLOCK);
     return _select_tracker.add_task(
-                    socket_accept_task::new_instance(*_net_socket, _listener)
+                    socket_accept_task::new_instance(*_net_socket, this)
             );
 }
 

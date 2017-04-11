@@ -3,8 +3,8 @@
 
 #include "base_rpc_interface.h"
 #include "inet_socket_comm.h"
-#include "unix_socket_comm.h"
-#include "fifo_comm.h"
+//#include "unix_socket_comm.h"
+//#include "fifo_comm.h"
 
 namespace cr_rpc
 {

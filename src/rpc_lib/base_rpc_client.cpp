@@ -11,7 +11,7 @@ rpc_client::rpc_client(rpc_comm_type_def type)
         break;
 
     case RPC_COMM_TYPE_FIFO:
-        _unix_comm_client = new fifo_comm_client(this);
+        //_unix_comm_client = new fifo_comm_client(this);
         break;
     }
 }

@@ -3,7 +3,7 @@
 
 #include "base_rpc_interface.h"
 #include "comm_type/inet_socket_comm.h"
-#include "fifo_comm.h"
+//#include "fifo_comm.h"
 #include "common/IReference.h"
 
 namespace cr_rpc
