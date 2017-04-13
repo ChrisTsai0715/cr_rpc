@@ -1,9 +1,11 @@
 #ifndef SELECT_TRACKER_H
 #define SELECT_TRACKER_H
 
+#include <list>
 #include "base_thread.h"
 #include "IReference.h"
-#include "select_task.h"
+#include "ccondition.h"
+//#include "select_task.h"
 
 namespace cr_rpc {
 

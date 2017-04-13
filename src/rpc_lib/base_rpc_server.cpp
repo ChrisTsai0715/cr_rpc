@@ -46,14 +46,14 @@ bool rpc_server::send_req(const std::string &cmd, rpc_req_args_type &req_map)
     std::string json_str;
     _format_req_msg(cmd, req_map, json_str);
 
-    return _comm_server->write(json_str.c_str(), json_str.size());
+    return _write(json_str.c_str(), json_str.size());
 }
 
 void rpc_server::_data_receive(int fd, char *buf, size_t size)
 {
     fd = fd;
     _receive_data_handle(buf, size);
-    _comm_server->read();
+    _read();
 }
 
 void rpc_server::_data_send(int fd, size_t size)
@@ -73,4 +73,14 @@ void rpc_server::_client_disconnect(int client_fd)
 {
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) != _client_fd_lists.end())
         _comm_server->disconnect_client(client_fd);
+}
+
+bool rpc_server::_write(const char *buf, size_t size)
+{
+    return _comm_server->write(_client_fd_lists.front(), buf, size);
+}
+
+bool rpc_server::_read()
+{
+    return _comm_server->read(_client_fd_lists.front());
 }

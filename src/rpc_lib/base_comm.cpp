@@ -1,4 +1,15 @@
 #include "base_comm.h"
+#include "select_task.h"
+
+cr_rpc::base_comm::base_comm()
+{
+    _select_tracker.run();
+}
+
+cr_rpc::base_comm::~base_comm()
+{
+    _select_tracker.stop();
+}
 
 bool cr_rpc::base_comm::_read(int id)
 {

@@ -1,6 +1,7 @@
 #ifndef BASE_COMM_H
 #define BASE_COMM_H
 
+#include <unistd.h>
 #include "common/IReference.h"
 #include "select_tracker.h"
 
@@ -9,15 +10,9 @@ namespace cr_rpc
     class base_comm : public CReference
     {
     public:
-        base_comm()
-        {
-            _select_tracker.run();
-        }
+        base_comm();
 
-        virtual ~base_comm()
-        {
-            _select_tracker.stop();
-        }
+        virtual ~base_comm();
 
     protected:
         virtual bool _read(int id);

@@ -1,4 +1,5 @@
 #include "select_tracker.h"
+#include "select_task.h"
 
 using namespace cr_rpc;
 select_tracker::select_tracker()

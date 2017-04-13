@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <list>
+#include <functional>
 #include "base_rpc_service.h"
 #include "cr_socket/inet_socket.h"
 #include "common/base_thread.h"

@@ -35,6 +35,10 @@ namespace cr_rpc
         virtual void _client_disconnect(int client_fd);
 
     private:
+        virtual bool _write(const char *buf, size_t size);
+        virtual bool _read();
+
+    private:
         CRefObj<base_comm_server> _comm_server;
         std::list<int> _client_fd_lists;
     };
