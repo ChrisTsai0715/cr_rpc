@@ -28,7 +28,7 @@ int socket_connect::operator()(CRefObj<net_socket> socket_fd, const std::string 
         dest_addr.sin_port = htons(port);
         dest_addr.sin_addr.s_addr = *((in_addr_t*)host_addr);
     #warning
-        _tracker.add_task(cr_rpc::socket_connect_task::new_instance(*socket_fd, _listener, 123, port));
+        //_tracker.add_task(cr_rpc::socket_connect_task::new_instance(*socket_fd, _listener, 123, port));
    }
    else if (socket_fd->get_socket_type() == SOCKET_UNIX)
    {
@@ -49,7 +49,7 @@ int socket_connect::operator()(CRefObj<net_socket> socket_fd, const std::string 
             throw std::runtime_error("connect server failed");;
         }
 
-        _tracker.add_task(cr_rpc::socket_connect_task::new_instance(*socket_fd, _listener, 123, port));
+        //_tracker.add_task(cr_rpc::socket_connect_task::new_instance(*socket_fd, _listener, 123, port));
    }
 
     return 0;

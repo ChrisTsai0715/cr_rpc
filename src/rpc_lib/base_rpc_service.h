@@ -30,7 +30,14 @@ namespace cr_rpc
             if (_rpc_funcs.find(args_map["cmd"]) == _rpc_funcs.end())
                 return false;
             rpc_service_func_def func = _rpc_funcs[args_map["cmd"]];
-            return func(args_map, ack_map) == 0;
+            try
+            {
+                return func(args_map, ack_map) == 0;
+            }
+            catch(...)
+            {
+                return false;
+            }
         }
 
     protected:

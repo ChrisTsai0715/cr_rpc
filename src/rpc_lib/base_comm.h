@@ -24,8 +24,8 @@ namespace cr_rpc
 
     protected:
         select_tracker _select_tracker;
-        CMutexLockEx _read_mutex;
-        CMutexLockEx _write_mutex;
+        CMutexLockEx   _read_mutex;
+        CMutexLockEx   _write_mutex;
     };
 
     class base_comm_client : public base_comm

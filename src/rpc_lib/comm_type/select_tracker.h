@@ -11,7 +11,8 @@ namespace cr_rpc {
 
     class select_task;
 
-    class select_tracker : private base_thread
+    class select_tracker : private base_thread,
+                           public CReference
     {
     public:
         select_tracker();

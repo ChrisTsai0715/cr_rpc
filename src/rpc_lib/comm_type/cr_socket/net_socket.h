@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "IReference.h"
+#include "io_fd.h"
 
 namespace cr_common{
 
@@ -23,47 +24,47 @@ namespace cr_common{
         SOCKET_UNIX,
     }socket_type;
 
-    class net_socket : public CReference
+    class net_socket : public io_fd
     {
     public:
-        net_socket(stream_type type)
-            : _socket_fd(0),
-              _stream_type(type)
+        explicit net_socket(stream_type type)
+            : 	_stream_type(type)
         {
+
+        }
+
+        net_socket(io_async_listener* listener, CRefObj<cr_rpc::select_tracker> tracker, stream_type type)
+            :	io_fd(listener, tracker),
+                _stream_type(type)
+        {
+
         }
 
         virtual ~net_socket()
         {
-            if (_socket_fd > 0)
-            {
-                ::close(_socket_fd);
-                _socket_fd = 0;
-            }
+
         }
 
         virtual int init() = 0;
         virtual int bind(const std::string& addr) = 0;
         virtual int close()
         {
-            if (_socket_fd > 0)
-                ::close(_socket_fd);
+            if (_fd > 0)
+                ::close(_fd);
 
             return 0;
         }
         int get_sock_addr(sockaddr* addr)
         {
-            if (_socket_fd == 0)
-                return -1;
+            if (_fd == 0) return -1;
 
             socklen_t len;
-            return getsockname(_socket_fd, addr, &len);
+            return getsockname(_fd, addr, &len);
         }
 
-        operator SOCKET() const{return _socket_fd;}
         socket_type get_socket_type() const{return _socket_type;}
 
     protected:
-        SOCKET _socket_fd;
         stream_type _stream_type;
         socket_type _socket_type;
     };

@@ -34,7 +34,7 @@ bool read_task::done()
     do
     {
         size = ::read(_socket_fd, buf, sizeof(buf));
-        if (_listener) _listener->_on_data_receive(_socket_fd, buf, size);
+        //if (_listener) _listener->_on_data_receive(_socket_fd, buf, size);
     }while(size == sizeof(buf));
 
     return true;
@@ -48,12 +48,12 @@ bool write_task::done()
         size = ::write(_socket_fd, _send_buf, _send_size);
         if(size == -1)
         {
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-                if (_listener) _listener->_on_data_send(_socket_fd, -1);
+//            if (errno != EAGAIN && errno != EWOULDBLOCK)
+//                if (_listener) _listener->_on_data_send(_socket_fd, -1);
 
             return false;
         }
-        if (_listener) _listener->_on_data_send(_socket_fd, size);
+ //       if (_listener) _listener->_on_data_send(_socket_fd, size);
         _send_size -= size;
         _send_buf += size;
     }while(_send_size > 0 && size > 0);

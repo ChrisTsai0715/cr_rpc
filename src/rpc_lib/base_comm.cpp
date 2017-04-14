@@ -24,9 +24,9 @@ bool cr_rpc::base_comm::_read(int id)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                return _select_tracker.add_task(
-                            read_task::new_instance(id, this)
-                            );
+//                return _select_tracker.add_task(
+//                            read_task::new_instance(id, this)
+//                            );
             }
             return false;
         }
@@ -49,9 +49,9 @@ bool cr_rpc::base_comm::_write(int id, const char *buf, size_t size)
         {
             if (errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                return _select_tracker.add_task(
-                            write_task::new_instance(id, this, buf, size)
-                            );
+//                return _select_tracker.add_task(
+//                            write_task::new_instance(id, this, buf, size)
+//                            );
             }
 
             return false;

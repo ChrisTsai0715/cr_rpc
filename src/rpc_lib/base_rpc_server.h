@@ -1,6 +1,7 @@
 #ifndef BASE_RPC_SERVER_H
 #define BASE_RPC_SERVER_H
 
+#include "cr_socket/net_socket.h"
 #include "base_rpc_interface.h"
 #include "inet_socket_comm.h"
 //#include "unix_socket_comm.h"
