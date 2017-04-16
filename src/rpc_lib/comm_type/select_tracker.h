@@ -7,7 +7,7 @@
 #include "ccondition.h"
 //#include "select_task.h"
 
-namespace cr_rpc {
+namespace cr_common {
 
     class select_task;
 
@@ -37,7 +37,7 @@ namespace cr_rpc {
 
     private:
         typedef std::list<CRefObj<select_task> > select_task_list_type;
-        cr_common::condition  _task_cond;
+        condition  _task_cond;
         select_task_list_type _uncomplete_task_lists;
         select_task_list_type _complete_task_lists;
         bool _stop_flag;

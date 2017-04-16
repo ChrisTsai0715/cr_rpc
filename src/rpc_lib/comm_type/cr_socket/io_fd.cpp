@@ -3,10 +3,15 @@
 
 using namespace cr_common;
 
-io_fd::io_fd(io_async_listener *listener, CRefObj<cr_rpc::select_tracker> tracker)
+io_fd::io_fd(CRefObj<cr_common::select_tracker> tracker)
     :	_tracker(tracker),
-        _listener(listener),
         _fd(0)
+{
+
+}
+
+io_fd::io_fd(int fd)
+    :	_fd(fd)
 {
 
 }
@@ -59,13 +64,13 @@ ssize_t io_fd::_write(const char *buf, size_t size, bool block)
             if (!block && (errno != EAGAIN && errno != EWOULDBLOCK))
             {
                 return _tracker->add_task(
-                            cr_rpc::write_task::new_instance(_fd, _listener, buf, size)
+                            cr_common::write_task::new_instance(_fd, this, buf, size)
                             ) ? 0 : -1;
             }
 
             return -1;
         }
-        if (!block) _listener->write_done(write_size);
+        if (!block) this->on_write_done(write_size);
         size -= write_size;
         buf  += write_size;
     }while(write_size > 0 && size > 0);
@@ -91,14 +96,14 @@ ssize_t io_fd::_read(char *buf, size_t size, bool block)
             if (!block && (errno == EAGAIN || errno == EWOULDBLOCK))
             {
                 return _tracker->add_task(
-                            cr_rpc::read_task::new_instance(_fd, _listener)
+                            cr_common::read_task::new_instance(_fd, this)
                             ) ? 0 : -1;
             }
 
             return -1;
         }
 
-        if (!block) _listener->read_done(read_buf, read_size);
+        if (!block) this->on_read_done(read_buf, read_size);
 
     }while((size_t)read_size == size);
 

@@ -19,7 +19,7 @@
 #include "common/IReference.h"
 #include "json/value.h"
 
-namespace cr_rpc
+namespace cr_common
 {
     typedef enum
     {

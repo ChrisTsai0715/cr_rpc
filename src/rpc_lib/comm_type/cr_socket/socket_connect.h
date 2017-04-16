@@ -15,14 +15,14 @@ namespace cr_common{
     class socket_connect
     {
     public:
-        socket_connect(cr_rpc::select_tracker &tracker, cr_rpc::base_comm* listener);
+        socket_connect(cr_common::select_tracker &tracker, cr_common::base_comm* listener);
         ~socket_connect(){}
 
         int operator()(CRefObj<net_socket> socket_fd, const std::string& dest, uint16_t port);
 
     private:
-        cr_rpc::select_tracker& _tracker;
-        cr_rpc::base_comm* _listener;
+        cr_common::select_tracker& _tracker;
+        cr_common::base_comm* _listener;
     };
 }
 

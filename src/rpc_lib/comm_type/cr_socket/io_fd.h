@@ -11,7 +11,8 @@ namespace cr_common {
     class io_fd : public CReference
     {
     public:
-        explicit io_fd(io_async_listener* listener, CRefObj<cr_rpc::select_tracker> tracker);
+        explicit io_fd(CRefObj<cr_common::select_tracker> tracker);
+        explicit io_fd(int fd);
         io_fd();
         virtual ~io_fd();
 
@@ -24,13 +25,16 @@ namespace cr_common {
         virtual ssize_t async_write(const char* buf, size_t size);
         operator int() const{return _fd;}
 
+    public:
+        virtual void on_read_done(char* buf, ssize_t size) = 0;
+        virtual void on_write_done(ssize_t size) = 0;
+
     private:
         ssize_t _write(const char*buf, size_t size, bool block = true);
         ssize_t _read(char* buf, size_t size, bool block = true);
 
     protected:
-        CRefObj<cr_rpc::select_tracker> _tracker;
-        io_async_listener* _listener;
+        CRefObj<cr_common::select_tracker> _tracker;
         int _fd;
 
     private:

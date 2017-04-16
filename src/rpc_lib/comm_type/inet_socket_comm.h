@@ -22,7 +22,7 @@
 #include "base_comm.h"
 #include "cr_socket/net_socket.h"
 
-namespace cr_rpc
+namespace cr_common
 {
     class inet_socket_comm
     {

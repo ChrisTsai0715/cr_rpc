@@ -33,8 +33,15 @@ namespace cr_common{
 
         }
 
-        net_socket(io_async_listener* listener, CRefObj<cr_rpc::select_tracker> tracker, stream_type type)
-            :	io_fd(listener, tracker),
+        explicit net_socket(int socket_fd)
+            :	io_fd(socket_fd)
+        {
+
+        }
+
+        net_socket(CRefObj<cr_common::select_tracker> tracker,
+                   stream_type type)
+            :	io_fd(tracker),
                 _stream_type(type)
         {
 
@@ -46,11 +53,11 @@ namespace cr_common{
         }
 
         virtual int init() = 0;
-        virtual int bind(const std::string& addr) = 0;
+        virtual int _bind(const std::string& addr) = 0;
         virtual int close()
         {
-            if (_fd > 0)
-                ::close(_fd);
+            if (_fd > 0) ::close(_fd);
+            _fd = 0;
 
             return 0;
         }

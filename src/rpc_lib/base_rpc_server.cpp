@@ -1,15 +1,18 @@
 #include "base_rpc_server.h"
 #include <algorithm>
+#include "cr_socket/inet_socket.h"
 
-using namespace cr_rpc;
+using namespace cr_common;
 
 rpc_server::rpc_server(rpc_comm_type_def type)
 {
+    _tracker = new cr_common::select_tracker;
+
     switch(type)
     {
     default:
     case RPC_COMM_TYPE_INET:
-        _comm_server = new isocket_comm_server(this);
+        _comm_server = new inet_server(STREAM_TCP, _tracker, this);
         break;
     case RPC_COMM_TYPE_UNIX:
  //       _comm_server = new usocket_comm_server(this);
@@ -49,27 +52,27 @@ bool rpc_server::send_req(const std::string &cmd, rpc_req_args_type &req_map)
     return _write(json_str.c_str(), json_str.size());
 }
 
-void rpc_server::_data_receive(int fd, char *buf, size_t size)
+void rpc_server::_on_data_receive(io_fd *fd, char *buf, size_t size)
 {
     fd = fd;
     _receive_data_handle(buf, size);
     _read();
 }
 
-void rpc_server::_data_send(int fd, size_t size)
+void rpc_server::_on_data_send(io_fd* fd, size_t size)
 {
     fd = fd;
     size = size;
 }
 
-void rpc_server::_client_connect(int client_fd)
+void rpc_server::_on_client_connect(io_fd *client_fd)
 {
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) == _client_fd_lists.end())
         _client_fd_lists.push_back(client_fd);
     _comm_server->accept();
 }
 
-void rpc_server::_client_disconnect(int client_fd)
+void rpc_server::_on_client_disconnect(io_fd* client_fd)
 {
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) != _client_fd_lists.end())
         _comm_server->disconnect_client(client_fd);

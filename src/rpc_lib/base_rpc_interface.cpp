@@ -3,7 +3,7 @@
 #include "json/reader.h"
 #include "json/writer.h"
 
-using namespace cr_rpc;
+using namespace cr_common;
 /***************************************************
  *
  *          my_rpc_interface

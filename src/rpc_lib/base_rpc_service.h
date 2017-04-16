@@ -5,7 +5,7 @@
 #include <string>
 #include <functional>
 
-namespace cr_rpc
+namespace cr_common
 {
     /**************
      *

@@ -4,12 +4,12 @@
 #include "cr_socket/inet_socket.h"
 #include "cr_socket/socket_connect.h"
 
-using namespace cr_rpc;
+using namespace cr_common;
 
 CRefObj<cr_common::net_socket> inet_socket_comm::_create_socket(const std::string path)
 {
     CRefObj<cr_common::net_socket> isocket = new cr_common::inet_socket(cr_common::STREAM_TCP);
-    if(path.size() > 0) isocket->bind(path);
+    if(path.size() > 0) isocket->_bind(path);
 
     sigset_t set;
     sigemptyset(&set);
