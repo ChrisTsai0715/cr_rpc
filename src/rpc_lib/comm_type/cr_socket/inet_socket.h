@@ -11,7 +11,8 @@ namespace cr_common {
     /*****************
      * inet_socket
      *****************/
-    class inet_socket : public net_socket
+    class inet_socket : public net_socket,
+                        virtual public base_comm
     {
     public:
         inet_socket(int socket_fd)
@@ -43,8 +44,8 @@ namespace cr_common {
         virtual int _bind(const std::string& addr);
         //get domain and port from addr
         virtual bool _acquire_domain_port(const std::string& addr, std::string& domain, uint16_t& port);
-        ssize_t recv_data(char* buf, size_t size);
-        ssize_t send_data(const char* buf, size_t size);
+        virtual ssize_t recv_data(char* buf, size_t size);
+        virtual ssize_t send_data(const char* buf, size_t size);
 
     public:
         //interface for base_comm
@@ -56,7 +57,7 @@ namespace cr_common {
      * inet_server
      ******************/
     class inet_server : public inet_socket,
-                        public base_comm_server
+                        virtual public base_comm_server
     {
     public:
         explicit inet_server(stream_type type)
@@ -86,6 +87,9 @@ namespace cr_common {
 
     public:
         //interface for base_comm_server
+         //interface for base_comm
+        virtual void _on_data_receive(char* buf, ssize_t size);
+        virtual void _on_data_send(ssize_t size);
         virtual void _on_connect(io_fd* client);
         virtual ssize_t recv_data(char* buf, size_t size);
         virtual ssize_t send_data(const char* buf, size_t size);
@@ -123,7 +127,7 @@ namespace cr_common {
      * inet_client
      *****************/
     class inet_client : public inet_socket,
-                        public base_comm_client
+                        virtual public base_comm_client
     {
     public:
         explicit inet_client(stream_type type)

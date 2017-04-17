@@ -69,8 +69,8 @@ namespace cr_common
 
         virtual ~isocket_comm_client(){}
 
-        virtual bool start_connect(const std::string& path, unsigned int timeout_ms);
-        virtual bool disconnect_server();
+        virtual int start_connect(const std::string& path, unsigned int timeout_ms);
+        virtual int disconnect_server();
 
         virtual bool read();
         virtual bool write(const char *buf, size_t size);

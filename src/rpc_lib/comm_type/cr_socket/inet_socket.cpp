@@ -9,11 +9,6 @@
 
 using namespace cr_common;
 
-inet_socket::inet_socket(stream_type type)
-    :	net_socket(type)
-{
-}
-
 int inet_socket::init()
 {
     int fd = 0;
@@ -70,12 +65,12 @@ bool inet_socket::_acquire_domain_port(const std::string &addr, std::string &dom
 
 void inet_socket::_on_data_receive(char *buf, ssize_t size)
 {
-    if (_listener) _listener->_on_data_receive(buf, size);
+    if (_listener) _listener->_on_data_receive(this, buf, size);
 }
 
 void inet_socket::_on_data_send(ssize_t size)
 {
-    if (_listener) _listener->_on_data_send(size);
+    if (_listener) _listener->_on_data_send(this, size);
 }
 
 
@@ -88,7 +83,7 @@ int inet_server::start_listen(const std::string &path)
     if (_fd <= 0) return -1;
     if (_bind(path) != 0) return -2;
 
-    if (listen(*_net_socket, 5) < 0)
+    if (listen(_fd, 5) < 0)
     {
         perror("socket bind failed...");
         return -3;
@@ -104,15 +99,15 @@ int inet_server::stop_listen()
 {
     if (_fd != 0)
     {
-        _select_tracker.del_task(*_net_socket, select_task::TASK_SELECT_ACCEPT);
-        return shutdown(*_net_socket, SHUT_RDWR) == 0;
+        _tracker->del_task(_fd, select_task::TASK_SELECT_ACCEPT);
+        return shutdown(_fd, SHUT_RDWR) == 0;
     }
     return true;
 }
 
 int inet_server::_accept()
 {
-    return _select_tracker.add_task(socket_accept_task::new_instance(_fd, this)) ? 0 : -1;
+    return _tracker->add_task(socket_accept_task::new_instance(_fd, this)) ? 0 : -1;
 }
 
 void inet_server::_on_connect(io_fd *client)
@@ -145,7 +140,7 @@ bool inet_server::socket_accept_task::done()
 
     inet_socket client_socket(client_fd);
 
-    base_comm_server* listener = _get_listener<comm_server_listener>();
+    comm_server_listener* listener = _get_listener<comm_server_listener>();
     if (listener != NULL) listener->_on_connect(client_socket);
     return true;
 }
@@ -184,7 +179,7 @@ ssize_t inet_client::send_data(const char *buf, size_t size)
 
 bool inet_client::socket_connect_task::done()
 {
-    struct hostent *host = gethostbyname(dest_addr.c_str());
+    struct hostent *host = gethostbyname(_dest_addr.c_str());
     if (host == NULL)
     {
         herror("get host by name");
@@ -204,8 +199,8 @@ bool inet_client::socket_connect_task::done()
         return false;
     }
 
-   comm_client_listener* listener = _get_listener<comm_client_listener>();
-   if (listener != NULL) listener->_on_connect(this);
+   base_comm_client* listener = _get_listener<base_comm_client>();
+   if (listener != NULL) listener->_on_connect();
 
    return true;
 }
