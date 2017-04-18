@@ -18,7 +18,7 @@ namespace cr_common{
         socket_connect(cr_common::select_tracker &tracker, cr_common::base_comm* listener);
         ~socket_connect(){}
 
-        int operator()(CRefObj<net_socket> socket_fd, const std::string& dest, uint16_t port);
+        int operator()(ref_obj<net_socket> socket_fd, const std::string& dest, uint16_t port);
 
     private:
         cr_common::select_tracker& _tracker;

@@ -12,12 +12,12 @@ namespace cr_common {
     class select_task;
 
     class select_tracker : private base_thread,
-                           public CReference
+                           public c_ref
     {
     public:
         select_tracker();
-        bool add_task(CRefObj<select_task> task);
-        bool del_task(CRefObj<select_task> task);
+        bool add_task(ref_obj<select_task> task);
+        bool del_task(ref_obj<select_task> task);
         bool del_task(int socket_fd, int task_type);
 
         virtual bool run()
@@ -36,7 +36,7 @@ namespace cr_common {
         virtual bool thread_loop();
 
     private:
-        typedef std::list<CRefObj<select_task> > select_task_list_type;
+        typedef std::list<ref_obj<select_task> > select_task_list_type;
         condition  _task_cond;
         select_task_list_type _uncomplete_task_lists;
         select_task_list_type _complete_task_lists;

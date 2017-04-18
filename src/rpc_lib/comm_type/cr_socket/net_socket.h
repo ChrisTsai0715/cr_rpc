@@ -39,7 +39,7 @@ namespace cr_common{
 
         }
 
-        net_socket(CRefObj<cr_common::select_tracker> tracker,
+        net_socket(ref_obj<cr_common::select_tracker> tracker,
                    stream_type type)
             :	io_fd(tracker),
                 _stream_type(type)

@@ -33,11 +33,11 @@ public:
 	virtual unsigned long	__stdcall Release()= 0;
 };
 
-class CReference
+class c_ref
 {
 public:
-	virtual ~CReference(){};
-	CReference ()
+    virtual ~c_ref(){};
+    c_ref ()
 		: m_lRef(0),m_lDel(1)	
 	{
 	}
@@ -61,7 +61,7 @@ public:
 
 template<class T>
 class CReference_T 
-	:virtual private CReference
+    :virtual private c_ref
 	,public T
 	,virtual public IReference
 {
@@ -92,11 +92,11 @@ public:
 
 	virtual unsigned long __stdcall AddRef()
 	{
-		return CReference::AddRef();
+        return c_ref::AddRef();
 	}
 	virtual unsigned long __stdcall Release()
 	{
-		return CReference::Release();
+        return c_ref::Release();
 	}
 protected:
 	virtual ~CReference_T(){}
@@ -109,25 +109,25 @@ protected:
  * 通常使用boost::shared_ptr会更好
  */
 template<class T>
-class CRefObj
+class ref_obj
 {
 public:
 	typedef T _PtrClass;
-	CRefObj()
+    ref_obj()
 	{
 		p=0;
 	}
-	CRefObj(T* lp)
+    ref_obj(T* lp)
 	{
 		if ((p = lp) != 0)
 			p->AddRef();
 	}
-	CRefObj(const CRefObj<T>& lp)
+    ref_obj(const ref_obj<T>& lp)
 	{
 		if ((p = lp.p) != 0)
 			p->AddRef();
 	}
-	~CRefObj()
+    ~ref_obj()
 	{
 		if (p)
 			p->Release();
@@ -158,7 +158,7 @@ public:
 		p = lp;
 		return p;
 	}
-	T* operator=(const CRefObj<T>& lp)
+    T* operator=(const ref_obj<T>& lp)
 	{
 		if (lp != 0)
 			lp->AddRef();
@@ -205,7 +205,7 @@ public:
  */
 template<class T>
 class CAggRef_T
-	:private CReference
+    :private c_ref
 	,public IReference
 {
 public:
@@ -221,11 +221,11 @@ public:
 	}
 	virtual unsigned long InternalAddRef()
 	{
-		return CReference::AddRef();
+        return c_ref::AddRef();
 	}
 	virtual unsigned long InternalRelease()
 	{
-		return CReference::Release();
+        return c_ref::Release();
 	}
 	struct INTERNAL_REF:IReference
 	{

@@ -4,6 +4,7 @@
 #include "select_tracker.h"
 #include "cr_socket/net_socket.h"
 #include "base_rpc_interface.h"
+#include "IReference.h"
 //#include "inet_socket_comm.h"
 //#include "unix_socket_comm.h"
 //#include "fifo_comm.h"
@@ -31,19 +32,19 @@ namespace cr_common
         virtual bool send_req(const std::string& cmd, rpc_req_args_type& req_map);
 
     public:
-        virtual void _on_data_receive(io_fd* fd, char* buf, size_t size);
-        virtual void _on_data_send(io_fd* fd, size_t size);
-        virtual void _on_client_connect(io_fd* client_fd);
-        virtual void _on_client_disconnect(io_fd* client_fd);
+        virtual void _on_data_receive(ref_obj<base_comm> fd, char* buf, size_t size);
+        virtual void _on_data_send(ref_obj<base_comm> fd, size_t size);
+        virtual void _on_client_connect(ref_obj<base_comm> client_fd);
+        virtual void _on_client_disconnect(ref_obj<base_comm> client_fd);
 
     private:
         virtual bool _write(const char *buf, size_t size);
         virtual bool _read();
 
     private:
-        CRefObj<base_comm_server> _comm_server;
-        std::list<int> _client_fd_lists;
-        CRefObj<cr_common::select_tracker> _tracker;
+        ref_obj<base_comm_server> _comm_server;
+        std::list<ref_obj<base_comm> > _client_fd_lists;
+        ref_obj<cr_common::select_tracker> _tracker;
     };
 }
 #endif // BASE_RPC_SERVER_H

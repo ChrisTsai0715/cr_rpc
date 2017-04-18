@@ -14,60 +14,10 @@
 #include "common/ccondition.h"
 #include "common/base_thread.h"
 #include "common/IReference.h"
-#include "comm_listener.h"
-#include "cr_socket/net_socket.h"
-#include "cr_socket/io_async_listener.h"
-#include "cr_socket/io_async_listener.h"
-#include "base_comm.h"
 
 namespace cr_common
 {
-    class io_select_event
-    {
-    public:
-        io_select_event(cr_common::io_async_listener* listener)
-            :   _listener(listener)
-        {
-        }
-
-    protected:
-        template<typename T>
-        T* _get_listener()
-        {
-            if (_listener == 0)
-                return NULL;
-
-            return dynamic_cast<T*>(_listener);
-        }
-
-    private:
-        cr_common::io_async_listener* _listener;
-    };
-
-    class comm_select_event
-    {
-    public:
-        comm_select_event(base_comm* listener)
-            :	_listener(listener)
-        {
-        }
-
-    protected:
-        template<typename T>
-        T* _get_listener()
-        {
-            if (_listener == 0)
-                return NULL;
-
-            return dynamic_cast<T*>(_listener);
-        }
-
-    private:
-        base_comm* _listener;
-
-    };
-
-    class select_task : public CReference
+    class select_task : public c_ref
     {
     public:
         enum
@@ -93,6 +43,7 @@ namespace cr_common
         int _socket_fd;
     };
 
+#if 0
     class fifo_accept_task : public select_task,
                              public io_select_event
     {
@@ -112,52 +63,7 @@ namespace cr_common
         virtual ~fifo_accept_task(){}
         virtual bool done();
     };
+#endif
 
-    class read_task : public select_task,
-                      public io_select_event
-    {
-    public:
-        static read_task* new_instance(int read_fd, cr_common::io_async_listener* listener)
-        {
-            return new read_task(read_fd, listener);
-        }
-
-    private:
-        read_task(int read_fd, cr_common::io_async_listener* listener)
-            :   select_task(select_task::TASK_SELECT_READ, read_fd),
-                io_select_event(listener)
-        {
-
-        }
-
-        virtual ~read_task(){}
-        virtual bool done();
-    };
-
-    class write_task : public select_task,
-                       public io_select_event
-    {
-    public:
-        static write_task* new_instance(int write_fd, cr_common::io_async_listener* listener, const char* buf, size_t size)
-        {
-            return new write_task(write_fd, listener, buf, size);
-        }
-
-    private:
-        write_task(int write_fd, cr_common::io_async_listener* listener, const char* buf, size_t size)
-            :   select_task(select_task::TASK_SELECT_WRITE, write_fd),
-        io_select_event(listener),
-        _send_size(size)
-        {
-            _send_buf = new char[size];
-            ::memcpy(_send_buf, buf, size);
-        }
-        virtual ~write_task(){}
-        virtual bool done();
-
-    private:
-        char*  _send_buf;
-        size_t _send_size;
-    };
 }
 #endif // SELECT_TASK_H

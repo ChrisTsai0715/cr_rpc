@@ -19,7 +19,7 @@ namespace cr_common
      * ****************/
 
     class rpc_client : protected base_rpc,
-                            public comm_client_listener
+                       public comm_client_listener
     {
     public:
         explicit rpc_client(rpc_comm_type_def type = RPC_COMM_TYPE_INET);
@@ -30,13 +30,14 @@ namespace cr_common
         virtual bool send_req(const std::string& cmd, rpc_req_args_type& req_map);
 
     public:
-        virtual void _on_disconnect_server(io_fd* fd);
-        virtual void _on_connect(io_fd* socket_fd);
-        virtual void _on_data_receive(io_fd* fd, char* buf, size_t size);
-        virtual void _on_data_send(io_fd* fd, size_t size);
+        virtual void _on_disconnect_server(ref_obj<base_comm> fd);
+        virtual void _on_connect(ref_obj<base_comm> socket_fd);
+        virtual void _on_data_receive(ref_obj<base_comm> fd, char* buf, size_t size);
+        virtual void _on_data_send(ref_obj<base_comm> fd, size_t size);
 
     private:
-        CRefObj<base_comm_client> _unix_comm_client;
+        ref_obj<base_comm_client> _unix_comm_client;
+        ref_obj<cr_common::select_tracker> _tracker;
     };
 }
 #endif // BASE_RPC_CLIENT_H

@@ -43,6 +43,16 @@ ssize_t inet_socket::send_data(const char *buf, size_t size)
     return net_socket::write(buf, size);
 }
 
+void inet_socket::on_read_done(char *buf, ssize_t size)
+{
+
+}
+
+void inet_socket::on_write_done(ssize_t size)
+{
+
+}
+
 int inet_socket::_bind(const std::string &addr)
 {
     assert(addr.size());
@@ -73,6 +83,11 @@ void inet_socket::_on_data_send(ssize_t size)
     if (_listener) _listener->_on_data_send(this, size);
 }
 
+int inet_socket::disconnect()
+{
+    if (_fd > 0) ::close(_fd);
+}
+
 
 /*********************
  * inet_server
@@ -89,7 +104,7 @@ int inet_server::start_listen(const std::string &path)
         return -3;
     }
 
-    _accept();
+    accept();
 
     return true;
 
@@ -105,16 +120,31 @@ int inet_server::stop_listen()
     return true;
 }
 
-int inet_server::_accept()
+int inet_server::accept()
 {
     return _tracker->add_task(socket_accept_task::new_instance(_fd, this)) ? 0 : -1;
 }
 
-void inet_server::_on_connect(io_fd *client)
+void inet_server::_on_data_receive(char *buf, ssize_t size)
+{
+    inet_socket::_on_data_receive(buf, size);
+}
+
+void inet_server::_on_data_send(ssize_t size)
+{
+    inet_socket::_on_data_send(size);
+}
+
+void inet_server::_on_connect(ref_obj<base_comm> client)
 {
     comm_server_listener* listener = NULL;
-    if (( listener = dynamic_cast<comm_server_listener>(_listener)) == NULL) return;
+    if (( listener = dynamic_cast<comm_server_listener*>(_listener)) == NULL) return;
     listener->_on_client_connect(client);
+}
+
+void inet_server::_on_disconnect()
+{
+
 }
 
 ssize_t inet_server::recv_data(char *buf, size_t size)
@@ -138,10 +168,8 @@ bool inet_server::socket_accept_task::done()
         return false;
     }
 
-    inet_socket client_socket(client_fd);
-
     comm_server_listener* listener = _get_listener<comm_server_listener>();
-    if (listener != NULL) listener->_on_connect(client_socket);
+    if (listener != NULL) listener->_on_client_connect(new inet_socket(client_fd));
     return true;
 }
 
@@ -164,12 +192,38 @@ int inet_client::start_connect(const std::string &path, unsigned int timeout_ms)
                               _fd,
                               this,
                               domain,
-                              port));
+                    port));
+}
+
+int inet_client::disconnect_server()
+{
+
+    return 0;
 }
 
 ssize_t inet_client::recv_data(char *buf, size_t size)
 {
     return inet_socket::recv_data(buf, size);
+}
+
+void inet_client::_on_data_receive(char *buf, ssize_t size)
+{
+    inet_socket::_on_data_receive(buf, size);
+}
+
+void inet_client::_on_data_send(ssize_t size)
+{
+    inet_socket::_on_data_send(size);
+}
+
+void inet_client::_on_connect()
+{
+
+}
+
+void inet_client::_on_disconnect()
+{
+
 }
 
 ssize_t inet_client::send_data(const char *buf, size_t size)

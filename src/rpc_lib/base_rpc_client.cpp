@@ -4,11 +4,13 @@
 using namespace cr_common;
 rpc_client::rpc_client(rpc_comm_type_def type)
 {
+    _tracker = new cr_common::select_tracker;
+
     switch(type)
     {
     default:
     case RPC_COMM_TYPE_INET:
-        _unix_comm_client = new inet_client(this);
+        _unix_comm_client = new inet_client(STREAM_TCP, _tracker, this);
         break;
 
     case RPC_COMM_TYPE_FIFO:
@@ -44,29 +46,27 @@ bool rpc_client::send_req(const std::string &cmd, rpc_req_args_type &req_map)
     std::string json_str;
     _format_req_msg(cmd, req_map, json_str);
 
-    return _unix_comm_client->write(json_str.c_str(), json_str.size());
+    return _unix_comm_client->send_data(json_str.c_str(), json_str.size());
 }
 
-void rpc_client::_disconnect_server(io_fd* fd)
+void rpc_client::_on_disconnect_server(ref_obj<base_comm> fd)
 {
-    fd = fd;
-    _unix_comm_client->disconnect_server();
+
 }
 
-void rpc_client::_connect(io_fd* socket_fd)
+void rpc_client::_on_connect(ref_obj<base_comm> socket_fd)
 {
-    return ;
+
 }
 
-void rpc_client::_data_receive(io_fd* fd, char *buf, size_t size)
+void rpc_client::_on_data_receive(ref_obj<base_comm> fd, char *buf, size_t size)
 {
     fd = fd;
     _receive_data_handle(buf, size);
-    _unix_comm_client->read();
+    _unix_comm_client->recv_data(NULL, 0);
 }
 
-void rpc_client::_data_send(io_fd* fd, size_t size)
+void rpc_client::_on_data_send(ref_obj<base_comm> fd, size_t size)
 {
-    fd = fd;
     size = size;
 }

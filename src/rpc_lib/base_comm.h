@@ -8,7 +8,29 @@
 
 namespace cr_common
 {
-    class base_comm : public CReference
+    class comm_select_event
+    {
+    public:
+        comm_select_event(base_comm* listener)
+            :	_listener(listener)
+        {
+        }
+
+    protected:
+        template<typename T>
+        T* _get_listener()
+        {
+            if (_listener == 0)
+                return NULL;
+
+            return dynamic_cast<T*>(_listener);
+        }
+
+    private:
+        base_comm* _listener;
+    };
+
+    class base_comm : public c_ref
     {
     public:
         base_comm()
@@ -20,6 +42,7 @@ namespace cr_common
     public:
         virtual ssize_t send_data(const char*, size_t) = 0;
         virtual ssize_t recv_data(char*, size_t) = 0;
+        virtual int disconnect() = 0;
 
     public:
         virtual void _on_data_receive(char*, ssize_t) = 0;
@@ -33,7 +56,7 @@ namespace cr_common
         comm_base_listener* _listener;
     };
 
-    class base_comm_client : public base_comm
+    class base_comm_client : virtual public base_comm
     {
     public:
         base_comm_client(){}
@@ -49,7 +72,6 @@ namespace cr_common
         }
 
         virtual int start_connect(const std::string& path, unsigned int timeout_ms) = 0;
-        virtual int disconnect_server() = 0;
 
     public:
         //interface for select task
@@ -57,7 +79,7 @@ namespace cr_common
         virtual void _on_disconnect() = 0;
     };
 
-    class base_comm_server : public base_comm
+    class base_comm_server : virtual public base_comm
     {
     public:
         base_comm_server(){}
@@ -74,13 +96,11 @@ namespace cr_common
 
         virtual int start_listen(const std::string&) = 0;
         virtual int stop_listen() = 0;
-
-    protected:
-        virtual int _accept() = 0;
+        virtual int accept() = 0;
 
     public:
         //interface for select task
-        virtual void _on_connect(io_fd* fd) = 0;
+        virtual void _on_connect(ref_obj<base_comm> fd) = 0;
         virtual void _on_disconnect() = 0;
     };
 }

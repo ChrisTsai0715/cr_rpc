@@ -52,38 +52,46 @@ bool rpc_server::send_req(const std::string &cmd, rpc_req_args_type &req_map)
     return _write(json_str.c_str(), json_str.size());
 }
 
-void rpc_server::_on_data_receive(io_fd *fd, char *buf, size_t size)
+void rpc_server::_on_data_receive(ref_obj<base_comm> fd, char *buf, size_t size)
 {
     fd = fd;
     _receive_data_handle(buf, size);
     _read();
 }
 
-void rpc_server::_on_data_send(io_fd* fd, size_t size)
+void rpc_server::_on_data_send(ref_obj<base_comm> fd, size_t size)
 {
     fd = fd;
     size = size;
 }
 
-void rpc_server::_on_client_connect(io_fd *client_fd)
+void rpc_server::_on_client_connect(ref_obj<base_comm> client_fd)
 {
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) == _client_fd_lists.end())
         _client_fd_lists.push_back(client_fd);
     _comm_server->accept();
 }
 
-void rpc_server::_on_client_disconnect(io_fd* client_fd)
+void rpc_server::_on_client_disconnect(ref_obj<base_comm> client_fd)
 {
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) != _client_fd_lists.end())
-        _comm_server->disconnect_client(client_fd);
+    {
+        base_comm* pclient = dynamic_cast<base_comm*>(client_fd.p);
+        if (pclient != NULL) return;
+        pclient->disconnect();
+    }
 }
 
 bool rpc_server::_write(const char *buf, size_t size)
 {
-    return _comm_server->write(_client_fd_lists.front(), buf, size);
+    ref_obj<base_comm> client = _client_fd_lists.front();
+
+    return client->send_data(buf, size);
 }
 
 bool rpc_server::_read()
 {
-    return _comm_server->read(_client_fd_lists.front());
+    ref_obj<base_comm> client = _client_fd_lists.front();
+
+    return client->recv_data(NULL, 0);
 }

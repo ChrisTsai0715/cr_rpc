@@ -28,7 +28,7 @@ namespace cr_common {
         }
 
         inet_socket(stream_type type,
-                    CRefObj<select_tracker> tracker
+                    ref_obj<select_tracker> tracker
                     )
             :	net_socket(tracker, type)
         {
@@ -46,18 +46,21 @@ namespace cr_common {
         virtual bool _acquire_domain_port(const std::string& addr, std::string& domain, uint16_t& port);
         virtual ssize_t recv_data(char* buf, size_t size);
         virtual ssize_t send_data(const char* buf, size_t size);
+        virtual void on_read_done(char* buf, ssize_t size);
+        virtual void on_write_done(ssize_t size);
 
     public:
         //interface for base_comm
         virtual void _on_data_receive(char* buf, ssize_t size);
         virtual void _on_data_send(ssize_t size);
+        virtual int disconnect();
     };
 
     /******************
      * inet_server
      ******************/
     class inet_server : public inet_socket,
-                        virtual public base_comm_server
+                        public base_comm_server
     {
     public:
         explicit inet_server(stream_type type)
@@ -67,7 +70,7 @@ namespace cr_common {
         }
 
         inet_server(stream_type type,
-                   CRefObj<cr_common::select_tracker> tracker,
+                   ref_obj<cr_common::select_tracker> tracker,
                    comm_server_listener* listener
                    )
             :	inet_socket(type, tracker),
@@ -81,23 +84,18 @@ namespace cr_common {
     public:
         virtual int start_listen(const std::string& path);
         virtual int stop_listen();
-
-    private:
-        virtual int _accept();
+        virtual int disconnect(){return inet_socket::disconnect();}
+        virtual int accept();
 
     public:
         //interface for base_comm_server
-         //interface for base_comm
         virtual void _on_data_receive(char* buf, ssize_t size);
         virtual void _on_data_send(ssize_t size);
-        virtual void _on_connect(io_fd* client);
+        virtual void _on_connect(ref_obj<base_comm> client);
+        virtual void _on_disconnect();
         virtual ssize_t recv_data(char* buf, size_t size);
         virtual ssize_t send_data(const char* buf, size_t size);
 
-    public:
-        //interface for io_fd
-        virtual void _on_read_done(char* buf, ssize_t size);
-        virtual void _on_write_done(ssize_t size);
     private:
          /***************
          * socket_accept_task
@@ -127,7 +125,7 @@ namespace cr_common {
      * inet_client
      *****************/
     class inet_client : public inet_socket,
-                        virtual public base_comm_client
+                        public base_comm_client
     {
     public:
         explicit inet_client(stream_type type)
@@ -137,7 +135,7 @@ namespace cr_common {
         }
 
         inet_client(stream_type type,
-                   CRefObj<cr_common::select_tracker> tracker,
+                   ref_obj<cr_common::select_tracker> tracker,
                    comm_client_listener* listener
                    )
             :	inet_socket(type, tracker),
@@ -150,10 +148,15 @@ namespace cr_common {
 
     public:
         //interface for base_comm_client
-        virtual int start_connect(const std::string& path, unsigned int timeout_ms);
-        virtual int disconnect_server() = 0;
         virtual ssize_t recv_data(char* buf, size_t size);
         virtual ssize_t send_data(const char* buf, size_t size);
+        virtual int disconnect(){return inet_socket::disconnect();}
+        virtual int start_connect(const std::string& path, unsigned int timeout_ms);
+        virtual int disconnect_server();
+        virtual void _on_data_receive(char* buf, ssize_t size);
+        virtual void _on_data_send(ssize_t size);
+        virtual void _on_connect();
+        virtual void _on_disconnect();
 
     private:
         /*********************

@@ -8,14 +8,14 @@ select_tracker::select_tracker()
 
 }
 
-bool select_tracker::add_task(CRefObj<select_task> task)
+bool select_tracker::add_task(ref_obj<select_task> task)
 {
     cr_common::auto_cond cscond(_task_cond);
     _uncomplete_task_lists.push_back(task);
     return _task_cond.signal() == 0;
 }
 
-bool select_tracker::del_task(CRefObj<select_task> task)
+bool select_tracker::del_task(ref_obj<select_task> task)
 {
     cr_common::auto_cond cscond(_task_cond);
     _uncomplete_task_lists.remove(task);

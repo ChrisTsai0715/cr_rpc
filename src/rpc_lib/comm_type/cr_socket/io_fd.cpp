@@ -3,7 +3,7 @@
 
 using namespace cr_common;
 
-io_fd::io_fd(CRefObj<cr_common::select_tracker> tracker)
+io_fd::io_fd(ref_obj<cr_common::select_tracker> tracker)
     :	_tracker(tracker),
         _fd(0)
 {
@@ -64,7 +64,7 @@ ssize_t io_fd::_write(const char *buf, size_t size, bool block)
             if (!block && (errno != EAGAIN && errno != EWOULDBLOCK))
             {
                 return _tracker->add_task(
-                            cr_common::write_task::new_instance(_fd, this, buf, size)
+                            write_task::new_instance(_fd, this, buf, size)
                             ) ? 0 : -1;
             }
 
@@ -96,7 +96,7 @@ ssize_t io_fd::_read(char *buf, size_t size, bool block)
             if (!block && (errno == EAGAIN || errno == EWOULDBLOCK))
             {
                 return _tracker->add_task(
-                            cr_common::read_task::new_instance(_fd, this)
+                            read_task::new_instance(_fd, this)
                             ) ? 0 : -1;
             }
 
@@ -108,4 +108,40 @@ ssize_t io_fd::_read(char *buf, size_t size, bool block)
     }while((size_t)read_size == size);
 
     return !block ? 0 : read_size;
+}
+
+bool io_fd::read_task::done()
+{
+    char buf[1024] = {0};
+    size_t size = 0;
+    do
+    {
+        size = ::read(_socket_fd, buf, sizeof(buf));
+        //if (_listener) _listener->_on_data_receive(_socket_fd, buf, size);
+    }while(size == sizeof(buf));
+
+    return true;
+}
+
+bool io_fd::write_task::done()
+{
+    ssize_t size;
+    do
+    {
+        size = ::write(_socket_fd, _send_buf, _send_size);
+        if(size == -1)
+        {
+//            if (errno != EAGAIN && errno != EWOULDBLOCK)
+//                if (_listener) _listener->_on_data_send(_socket_fd, -1);
+
+            return false;
+        }
+ //       if (_listener) _listener->_on_data_send(_socket_fd, size);
+        _send_size -= size;
+        _send_buf += size;
+    }while(_send_size > 0 && size > 0);
+
+    delete []_send_buf;
+
+    return true;
 }

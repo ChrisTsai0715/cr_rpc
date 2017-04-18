@@ -10,7 +10,7 @@ socket_connect::socket_connect(cr_common::select_tracker& tracker, cr_common::ba
 {
 }
 
-int socket_connect::operator()(CRefObj<net_socket> socket_fd, const std::string &dest, uint16_t port)
+int socket_connect::operator()(ref_obj<net_socket> socket_fd, const std::string &dest, uint16_t port)
 {
    if (socket_fd->get_socket_type() == SOCKET_INET)
    {
