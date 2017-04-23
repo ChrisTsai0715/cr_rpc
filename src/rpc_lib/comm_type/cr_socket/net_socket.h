@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <string>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "IReference.h"
 #include "io_fd.h"
@@ -33,10 +34,10 @@ namespace cr_common{
 
         }
 
-        explicit net_socket(int socket_fd)
-            :	io_fd(socket_fd)
+        explicit net_socket(int socket_fd, ref_obj<select_tracker> tracker)
+            :	io_fd(socket_fd, tracker)
         {
-
+            fcntl(socket_fd, F_SETFL, O_NONBLOCK);
         }
 
         net_socket(ref_obj<cr_common::select_tracker> tracker,

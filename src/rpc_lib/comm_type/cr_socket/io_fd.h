@@ -29,7 +29,7 @@ namespace cr_common {
             return dynamic_cast<T*>(_listener);
         }
 
-    private:
+    protected:
         cr_common::io_fd* _listener;
     };
 
@@ -37,7 +37,7 @@ namespace cr_common {
     {
     public:
         explicit io_fd(ref_obj<cr_common::select_tracker> tracker);
-        explicit io_fd(int fd);
+        explicit io_fd(int fd, ref_obj<cr_common::select_tracker> tracker);
         io_fd();
         virtual ~io_fd();
 

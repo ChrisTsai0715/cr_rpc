@@ -10,8 +10,9 @@ io_fd::io_fd(ref_obj<cr_common::select_tracker> tracker)
 
 }
 
-io_fd::io_fd(int fd)
-    :	_fd(fd)
+io_fd::io_fd(int fd, ref_obj<cr_common::select_tracker> tracker)
+    :	_fd(fd),
+        _tracker(tracker)
 {
 
 }
@@ -25,6 +26,7 @@ io_fd::io_fd()
 
 io_fd::~io_fd()
 {
+    printf("delete fd:%d\n", _fd);
     if (_fd > 0)
         ::close(_fd);
     _fd = 0;
@@ -87,7 +89,7 @@ ssize_t io_fd::_read(char *buf, size_t size, bool block)
     {
         char read_buf[2048] = {0};
         !block ?
-            read_size = ::read(_fd, read_buf, sizeof read_buf)
+            read_size = ::read(_fd, read_buf, sizeof(read_buf))
                 :
             read_size = ::read(_fd, buf, size);
 
@@ -117,7 +119,7 @@ bool io_fd::read_task::done()
     do
     {
         size = ::read(_socket_fd, buf, sizeof(buf));
-        //if (_listener) _listener->_on_data_receive(_socket_fd, buf, size);
+        if (_listener) _listener->on_read_done(buf, size);
     }while(size == sizeof(buf));
 
     return true;
@@ -136,7 +138,7 @@ bool io_fd::write_task::done()
 
             return false;
         }
- //       if (_listener) _listener->_on_data_send(_socket_fd, size);
+        if (_listener) _listener->on_write_done(size);
         _send_size -= size;
         _send_buf += size;
     }while(_send_size > 0 && size > 0);

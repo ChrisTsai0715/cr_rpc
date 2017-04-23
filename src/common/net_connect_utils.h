@@ -30,6 +30,7 @@
 #include "common/base_thread.h"
 
 #define CONNECTUTILS_BIND NetConnectUtils()
+#define CONNECTUTILS_CONNECT NetConnectUtils()
 #define CONNECTUTILS_TEST NetConnectUtils()
 
 typedef enum
@@ -86,18 +87,23 @@ public:
     }
 
     //test tcp connect
-    int operator()(const char* domain, int port, const char* bindAddr, int timeout_ms)
+    int operator()(const char* domain, uint16_t port, const char* bindAddr, uint32_t timeout_ms)
     {
-        int ret = NCR_OK;
+        int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0) throw std::runtime_error(netconnect_errstr_list[NCR_BIND_ERROR]);
+        int ret = this->operator ()(sockfd, domain, port, bindAddr, timeout_ms);
+        close(sockfd);
 
+        return ret;
+    }
+
+    int operator ()(int sockfd, const char* domain, uint16_t port, const char* bindAddr, uint32_t timeout_ms)
+    {
         struct in_addr server_host;
         {
             CAutoLock<CMutexLock> cslock(m_threadMutex);
             server_host = this->GetHostName(domain, timeout_ms);
         }
-
-        int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) throw std::runtime_error(netconnect_errstr_list[NCR_BIND_ERROR]);
 
         if (this->operator()(sockfd, bindAddr) != NCR_OK)
         {
@@ -105,9 +111,7 @@ public:
             throw std::runtime_error(netconnect_errstr_list[NCR_BIND_ERROR]);
         }
 
-        ret = ConnectToServer(sockfd, &server_host, port, timeout_ms);
-        close(sockfd);
-        return ret;
+        return ConnectToServer(sockfd, &server_host, port, timeout_ms);
     }
 
 private:

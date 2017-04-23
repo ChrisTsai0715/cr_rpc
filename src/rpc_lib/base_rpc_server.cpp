@@ -7,6 +7,7 @@ using namespace cr_common;
 rpc_server::rpc_server(rpc_comm_type_def type)
 {
     _tracker = new cr_common::select_tracker;
+    _tracker->run();
 
     switch(type)
     {
@@ -47,6 +48,7 @@ bool rpc_server::start_listen()
 bool rpc_server::send_req(const std::string &cmd, rpc_req_args_type &req_map)
 {
     std::string json_str;
+    //format request message as some protocol(json or etc.).
     _format_req_msg(cmd, req_map, json_str);
 
     return _write(json_str.c_str(), json_str.size());
@@ -67,18 +69,22 @@ void rpc_server::_on_data_send(ref_obj<base_comm> fd, size_t size)
 
 void rpc_server::_on_client_connect(ref_obj<base_comm> client_fd)
 {
+    CAutoLock<CMutexLock> cslock(_client_fd_mutex);
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) == _client_fd_lists.end())
         _client_fd_lists.push_back(client_fd);
+
+    client_fd->recv_data(NULL, 0);
     _comm_server->accept();
 }
 
-void rpc_server::_on_client_disconnect(ref_obj<base_comm> client_fd)
+void rpc_server::_on_disconnect(ref_obj<base_comm> client_fd)
 {
+    CAutoLock<CMutexLock> cslock(_client_fd_mutex);
     if (std::find(_client_fd_lists.begin(), _client_fd_lists.end(), client_fd) != _client_fd_lists.end())
     {
-        base_comm* pclient = dynamic_cast<base_comm*>(client_fd.p);
-        if (pclient != NULL) return;
-        pclient->disconnect();
+        inet_socket* pclient = dynamic_cast<inet_socket*>(client_fd.p);
+        if (pclient == NULL) return;
+        _client_fd_lists.remove(client_fd);
     }
 }
 

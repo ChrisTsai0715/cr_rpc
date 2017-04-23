@@ -35,9 +35,17 @@ namespace cr_common
     public:
         base_comm()
             : 	_listener(0)
-        {}
-        explicit base_comm(comm_base_listener* listener);
-        virtual ~base_comm();
+        {
+        }
+
+        explicit base_comm(comm_listener* listener)
+            :	_listener(listener)
+        {
+        }
+
+        virtual ~base_comm()
+        {
+        }
 
     public:
         virtual ssize_t send_data(const char*, size_t) = 0;
@@ -48,19 +56,22 @@ namespace cr_common
         virtual void _on_data_receive(char*, ssize_t) = 0;
         virtual void _on_data_send(ssize_t) = 0;
 
+    public:
+        comm_listener* get_comm_listener() const {return _listener;}
+
     protected:
         CMutexLockEx   _read_mutex;
         CMutexLockEx   _write_mutex;
 
     protected:
-        comm_base_listener* _listener;
+        comm_listener* _listener;
     };
 
     class base_comm_client : virtual public base_comm
     {
     public:
         base_comm_client(){}
-        explicit base_comm_client(comm_client_listener* listener)
+        explicit base_comm_client(comm_listener* listener)
             :	base_comm(listener)
         {
 
@@ -71,19 +82,18 @@ namespace cr_common
 
         }
 
-        virtual int start_connect(const std::string& path, unsigned int timeout_ms) = 0;
+        virtual int start_connect(const std::string& path, bool block, unsigned int timeout_ms) = 0;
 
     public:
         //interface for select task
         virtual void _on_connect() = 0;
-        virtual void _on_disconnect() = 0;
     };
 
     class base_comm_server : virtual public base_comm
     {
     public:
         base_comm_server(){}
-        explicit base_comm_server(comm_server_listener* listener)
+        explicit base_comm_server(comm_listener* listener)
             :	base_comm(listener)
         {
 
@@ -101,7 +111,6 @@ namespace cr_common
     public:
         //interface for select task
         virtual void _on_connect(ref_obj<base_comm> fd) = 0;
-        virtual void _on_disconnect() = 0;
     };
 }
 

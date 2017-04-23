@@ -37,17 +37,22 @@ namespace cr_common
         virtual ~base_rpc();
 
         void set_unix_sock_path(const std::string& path) {_socket_path = path;}
+        //regist rpc services.
         bool reg_services(const std::string& service_name, base_rpc_service* service);
 
     protected:
+        //format rpc message in json or other protocols.
         bool _format_req_msg(const std::string &cmd, rpc_req_args_type &req_map, std::string &value);
+        //parse the format of rpc protocols into map
         bool _req_msg_parse(const char* req_msg, size_t size, std::vector<rpc_req_args_type>& req_map_vec);
+        //handle receive data
         bool _receive_data_handle(char *buf, size_t size);
 
     public:
         virtual bool send_req(const std::string& cmd, rpc_req_args_type& req_map) = 0;
 
     private:
+        //divide the rpc message as of each message has a '\n' end.
         int _divide_req_msg(const void *req_msg, size_t size, std::list<Json::Value> &json_value_list, void **unread_ptr);
 
     private:
@@ -55,6 +60,7 @@ namespace cr_common
         size_t _divide_unread_size;
 
     protected:
+        //handle rpc message in thread.
         class rpc_data_handle_thread : private base_thread
         {
         public:
@@ -76,6 +82,7 @@ namespace cr_common
                 return base_thread::stop();
             }
 
+            //push rpc message into a queue.
             bool _push_req_map(const rpc_req_args_type &req_map);
             template<typename T>
             bool _push_req_map(T& req_maps);

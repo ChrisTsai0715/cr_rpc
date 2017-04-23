@@ -8,6 +8,11 @@ select_tracker::select_tracker()
 
 }
 
+select_tracker::~select_tracker()
+{
+    this->stop();
+}
+
 bool select_tracker::add_task(ref_obj<select_task> task)
 {
     cr_common::auto_cond cscond(_task_cond);
@@ -24,9 +29,10 @@ bool select_tracker::del_task(ref_obj<select_task> task)
 
 bool select_tracker::del_task(int socket_fd, int task_type)
 {
+    if (socket_fd == 0) return false;
     cr_common::auto_cond cscond(_task_cond);
     select_task_list_type task_lists = _uncomplete_task_lists;
-    for (select_task_list_type::iterator it = task_lists.begin();
+    for (auto it = task_lists.begin();
          it != task_lists.end();
          it ++)
     {
@@ -35,7 +41,25 @@ bool select_tracker::del_task(int socket_fd, int task_type)
             _uncomplete_task_lists.remove(*it);
         }
     }
-    return false;
+    return true;
+}
+
+bool select_tracker::del_task(int socket_fd)
+{
+    if (socket_fd == 0) return false;
+    cr_common::auto_cond cscond(_task_cond);
+    select_task_list_type task_lists = _uncomplete_task_lists;
+    for (auto it = task_lists.begin();
+         it != task_lists.end();
+         it ++)
+    {
+        if ((*it)->get_socket_fd() == socket_fd)
+        {
+            _uncomplete_task_lists.remove(*it);
+        }
+    }
+
+    return true;
 }
 
 bool select_tracker::thread_loop()
@@ -67,7 +91,7 @@ bool select_tracker::thread_loop()
             task_lists = _uncomplete_task_lists;
         }
 
-        for (select_task_list_type::iterator it = task_lists.begin();
+        for (auto it = task_lists.begin();
              it != task_lists.end();
              it ++)
         {
@@ -99,7 +123,7 @@ bool select_tracker::thread_loop()
         }
         else if (ret > 0)
         {
-            for (select_task_list_type::iterator it = task_lists.begin();
+            for (auto it = task_lists.begin();
                  it != task_lists.end();
                  it ++)
             {

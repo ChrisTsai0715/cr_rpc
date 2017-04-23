@@ -16,9 +16,12 @@ namespace cr_common {
     {
     public:
         select_tracker();
+        virtual ~select_tracker();
+
         bool add_task(ref_obj<select_task> task);
         bool del_task(ref_obj<select_task> task);
         bool del_task(int socket_fd, int task_type);
+        bool del_task(int socket_fd);
 
         virtual bool run()
         {

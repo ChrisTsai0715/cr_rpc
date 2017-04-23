@@ -25,11 +25,11 @@ namespace cr_common
         }
         virtual ~base_rpc_service(){}
         const std::string& get_service_name() const {return _service_name;}
-        virtual bool invoke(std::map<std::string, std::string>& args_map, std::map<std::string, std::string>& ack_map)
+        virtual bool invoke(const std::map<std::string, std::string>& args_map, std::map<std::string, std::string>& ack_map)
         {
-            if (_rpc_funcs.find(args_map["cmd"]) == _rpc_funcs.end())
+            if (_rpc_funcs.find(args_map.find("cmd")->second) == _rpc_funcs.end())
                 return false;
-            rpc_service_func_def func = _rpc_funcs[args_map["cmd"]];
+            rpc_service_func_def func = _rpc_funcs[args_map.find("cmd")->second];
             try
             {
                 return func(args_map, ack_map) == 0;

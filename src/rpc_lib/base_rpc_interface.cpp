@@ -47,7 +47,7 @@ bool base_rpc::_format_req_msg(const std::string& cmd, rpc_req_args_type &req_ma
     Json::Value req_json;
     req_json["rpc_service"] = cmd;
     Json::Value arg_json;
-    rpc_req_args_type::iterator it = req_map.begin();
+    auto it = req_map.begin();
     for (; it != req_map.end(); it ++)
     {
         arg_json[it->first] = it->second;
@@ -86,7 +86,7 @@ bool base_rpc::_req_msg_parse(const char *req_msg, size_t size, std::vector<rpc_
         memcpy(_divide_unread_buf, unread_ptr, _divide_unread_size);
     }
 
-    std::list<Json::Value>::iterator json_it = json_value_list.begin();
+    auto json_it = json_value_list.begin();
     for (; json_it != json_value_list.end(); json_it ++)
     {
         rpc_req_args_type req_args_map;
@@ -94,7 +94,7 @@ bool base_rpc::_req_msg_parse(const char *req_msg, size_t size, std::vector<rpc_
         Json::Value req_args_json   = (*json_it)["args"];
 
         Json::Value::Members membrs = req_args_json.getMemberNames();
-        Json::Value::Members::iterator mbr_it = membrs.begin();
+        auto mbr_it = membrs.begin();
         for (; mbr_it != membrs.end(); mbr_it ++)
         {
             req_args_map[*mbr_it] = req_args_json[*mbr_it].asString();
@@ -171,11 +171,11 @@ bool base_rpc::rpc_data_handle_thread::thread_loop()
             else return true;
         }
 
-         req_map_lists = _req_map_lists;
-         _req_map_lists.clear();
+        req_map_lists = _req_map_lists;
+        _req_map_lists.clear();
     }
 
-    std::list<rpc_req_args_type>::iterator it = req_map_lists.begin();
+    auto it = req_map_lists.begin();
     for (; it != req_map_lists.end(); it ++)
     {
         if (_outer->_services.find((*it)["rpc_service"]) == _outer->_services.end())

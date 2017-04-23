@@ -15,8 +15,12 @@ namespace cr_common {
                         virtual public base_comm
     {
     public:
-        inet_socket(int socket_fd)
-            :	net_socket(socket_fd)
+        inet_socket(int socket_fd,
+                    ref_obj<select_tracker> tracker,
+                    comm_listener* listener
+                    )
+            :	net_socket(socket_fd, tracker),
+                base_comm(listener)
         {
 
         }
@@ -39,6 +43,7 @@ namespace cr_common {
 
     public:
         virtual int init();
+        bool delete_all_task();
 
     protected:
         virtual int _bind(const std::string& addr);
@@ -48,6 +53,9 @@ namespace cr_common {
         virtual ssize_t send_data(const char* buf, size_t size);
         virtual void on_read_done(char* buf, ssize_t size);
         virtual void on_write_done(ssize_t size);
+
+    protected:
+        virtual void _on_disconnect();
 
     public:
         //interface for base_comm
@@ -71,9 +79,10 @@ namespace cr_common {
 
         inet_server(stream_type type,
                    ref_obj<cr_common::select_tracker> tracker,
-                   comm_server_listener* listener
+                   comm_listener* listener
                    )
-            :	inet_socket(type, tracker),
+            :	base_comm(listener),
+                inet_socket(type, tracker),
                 base_comm_server(listener)
         {
 
@@ -92,7 +101,6 @@ namespace cr_common {
         virtual void _on_data_receive(char* buf, ssize_t size);
         virtual void _on_data_send(ssize_t size);
         virtual void _on_connect(ref_obj<base_comm> client);
-        virtual void _on_disconnect();
         virtual ssize_t recv_data(char* buf, size_t size);
         virtual ssize_t send_data(const char* buf, size_t size);
 
@@ -104,20 +112,24 @@ namespace cr_common {
                                    public comm_select_event
         {
         public:
-            static socket_accept_task* new_instance(int listen_fd, base_comm* listener)
+            static socket_accept_task* new_instance(int listen_fd, base_comm* listener, ref_obj<select_tracker> tracker)
             {
-                return new socket_accept_task(listen_fd, listener);
+                return new socket_accept_task(listen_fd, listener, tracker);
             }
 
         private:
-            socket_accept_task(int listen_fd, base_comm* listener)
+            socket_accept_task(int listen_fd, base_comm* listener, ref_obj<select_tracker> tracker)
                 :   select_task(select_task::TASK_SELECT_ACCEPT, listen_fd),
-                    comm_select_event(listener)
+                    comm_select_event(listener),
+                    _tracker(tracker)
             {
             }
 
             virtual ~socket_accept_task(){}
             virtual bool done();
+
+        private:
+            ref_obj<select_tracker> _tracker;
         };
     };
 
@@ -136,9 +148,10 @@ namespace cr_common {
 
         inet_client(stream_type type,
                    ref_obj<cr_common::select_tracker> tracker,
-                   comm_client_listener* listener
+                   comm_listener* listener
                    )
-            :	inet_socket(type, tracker),
+            :	base_comm(listener),
+                inet_socket(type, tracker),
                 base_comm_client(listener)
         {
 
@@ -150,13 +163,12 @@ namespace cr_common {
         //interface for base_comm_client
         virtual ssize_t recv_data(char* buf, size_t size);
         virtual ssize_t send_data(const char* buf, size_t size);
-        virtual int disconnect(){return inet_socket::disconnect();}
-        virtual int start_connect(const std::string& path, unsigned int timeout_ms);
+        virtual int disconnect() {return inet_socket::disconnect();}
+        virtual int start_connect(const std::string& path, bool block = false, unsigned int timeout_ms = 0);
         virtual int disconnect_server();
         virtual void _on_data_receive(char* buf, ssize_t size);
         virtual void _on_data_send(ssize_t size);
         virtual void _on_connect();
-        virtual void _on_disconnect();
 
     private:
         /*********************
